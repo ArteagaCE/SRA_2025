@@ -1,0 +1,20 @@
+# Temporales de Compilación C/C++ y Ensamblador
+*.o
+*.obj
+*.exe
+*.out
+
+# Temporales de Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Temporales de LaTeX
+*.aux
+*.log
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
