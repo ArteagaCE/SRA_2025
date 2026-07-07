@@ -9,9 +9,9 @@ R4 N001 vo2 9k
 V1 V+ 0 15
 V2 V- 0 -15
 V3 Vin 0 1 AC 1
-.include LM324_2P.lib
+.include LM324.lib
 * .tran 1
 .ac dec 10000 1 100Meg
-* .op
+* .step param R_var 5k 12.361k 1k
 .backanno
 .end
