@@ -18,3 +18,6 @@ __pycache__/
 *.fdb_latexmk
 *.bbl
 *.blg
+
+# Archivos de simulaciones
+simulaciones/*.raw
