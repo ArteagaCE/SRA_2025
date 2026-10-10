@@ -1,0 +1,125 @@
+\section{Ejercicio Adicional: Oscilador de 12 kHz}
+\label{sec_4}
+Se pide diseñar un oscilador de $f = 12 \, [kHz]$ con capacitores, resistores, una fuente de $\pm 12 \, [V]$ y un LM324, y ajustarlo en simulación a una tolerancia de $\pm 100 \, [Hz]$.
+
+\subsection{Oscilador Puente de Wien}
+\label{sec_4.1}
+Se adopta el oscilador puente de Wien \cite{sedra, sloa060} de la \autoref{fig:wien}, en el que un amplificador no inversor de ganancia $A = 1 + R_f / R_g$ se realimenta positivamente a través de una red $RC$ serie--paralelo. Con $R_1 = R_2 = R$ y $C_1 = C_2 = C$, la transferencia de la red es:
+\begin{equation}
+    \beta(j\omega) = \frac{V_p}{V_{out}} = \frac{1}{3 + j\left(\dfrac{\omega}{\omega_0} - \dfrac{\omega_0}{\omega}\right)}, \qquad \omega_0 = \frac{1}{RC}
+    \label{eq:wien}
+\end{equation}
+
+A la frecuencia $\omega_0$ la red no introduce desfasaje y atenúa $1/3$. Por el criterio de Barkhausen ($A \beta = 1$), el circuito oscila en:
+\begin{equation}
+    f_0 = \frac{1}{2 \pi R C}, \qquad A = 1 + \frac{R_f}{R_g} = 3
+\end{equation}
+
+\begin{figure}[H]
+    \centering
+    \begin{circuitikz}[scale=0.8, transform shape]
+        \draw (0,0) node[op amp, noinv input up] (U) {$U_1$};
+        \draw (U.+) -- ++(-1,0) coordinate (P) node[above right]{$V_p$};
+        \draw (P) -- ++(0,2) coordinate (T) to[R, l=$R_1$, a=$8.25 \, k\Omega$] ++(2.6,0) to[C, l=$C_1$, a=$1.5 \, nF$] ++(2.6,0) coordinate (T2);
+        \draw (P) -- ++(-1.5,0) coordinate (P2) to[R, l_=$R_2$, a^=$8.25 \, k\Omega$, *-] ++(0,-2.5) node[ground]{};
+        \draw (P2) -- ++(-3,0) to[C, l_=$C_2$, a^=$1.5 \, nF$] ++(0,-2.5) node[ground]{};
+        \draw (U.-) -- ++(-0.5,0) coordinate (N) -- ++(0,-1.5) coordinate (N2);
+        \draw (N2) to[R, l_=$R_g$, a^=$10 \, k\Omega$, *-] ++(0,-2) node[ground]{};
+        \draw (N2) to[R, l=$R_{f1}$, a=$15 \, k\Omega$] ++(2.4,0) coordinate (M) to[R, l=$R_{f2}$, a=$6.8 \, k\Omega$, *-*] ++(2.4,0) coordinate (M2);
+        \draw (M) -- ++(0,-1.4) to[D, l_=$D_1$] ($(M2)+(0,-1.4)$) -- (M2);
+        \draw ($(M)+(0,-1.4)$) -- ++(0,-1.4) to[D, l_=$D_2$, invert] ($(M2)+(0,-2.8)$) -- ($(M2)+(0,-1.4)$);
+        \draw (U.out) -- (U.out -| T2) node[circ]{} to[short, -o] ++(1,0) node[right]{$V_{out}$};
+        \draw (T2) -- (M2);
+    \end{circuitikz}
+    \caption{Oscilador puente de Wien con control de amplitud por diodos ($D_1$, $D_2$: 1N4148).}
+    \label{fig:wien}
+\end{figure}
+
+\subsection{Control de Amplitud}
+\label{sec_4.2}
+Para garantizar el arranque, la ganancia inicial debe ser algo mayor que $3$; si se mantuviera constante, la amplitud crecería hasta saturar el amplificador. Por ello, la resistencia de realimentación se divide en $R_{f1}$ y $R_{f2}$, y esta última se pone en paralelo con dos diodos en antiparalelo. Con señales pequeñas los diodos no conducen y la ganancia es:
+\begin{equation}
+    A_0 = 1 + \frac{R_{f1} + R_{f2}}{R_g} = 1 + \frac{15 + 6.8}{10} = 3.18
+\end{equation}
+es decir, un $6 \, [\%]$ por encima del valor crítico. A medida que la amplitud crece, los diodos comienzan a conducir en los picos y reducen la resistencia equivalente de $R_{f2}$ hasta que la ganancia efectiva vale $3$, lo que ocurre cuando $R_{f2,ef} = 2 R_g - R_{f1} = 5 \, [k\Omega]$. En esa condición la tensión en $R_{f2}$ es aproximadamente la de conducción de los diodos ($V_D \approx 0.5 \, [V]$), y la amplitud de salida resulta:
+\begin{equation}
+    V_{out,pico} \approx V_D \, \frac{3 R_g}{R_{f2,ef}} = 0.5 \, [V] \cdot \frac{30 \, [k\Omega]}{5 \, [k\Omega]} = 3 \, [V]
+    \label{eq:amplitud}
+\end{equation}
+
+Limitar la amplitud es necesario también por el \textit{slew rate} del LM324. La máxima amplitud sin distorsión por velocidad de respuesta a $12 \, [kHz]$ es:
+\begin{equation}
+    V_{max} = \frac{SR}{2 \pi f_0} = \frac{0.5 \, [V/\mu s]}{2 \pi \cdot 12 \, [kHz]} = 6.6 \, [V]
+\end{equation}
+
+Un primer diseño con $R_{f1} = 18 \, [k\Omega]$ y $R_{f2} = 4.7 \, [k\Omega]$ alcanzaba una amplitud de $7.8 \, [V]$: el amplificador quedaba limitado por \textit{slew rate}, la distorsión armónica total superaba el $10 \, [\%]$ y la frecuencia caía a $10.8 \, [kHz]$. Por eso se adoptaron los valores de la \autoref{fig:wien}.
+
+\subsection{Diseño y Ajuste de la Frecuencia}
+\label{sec_4.3}
+Con $C = 1.5 \, [nF]$, el valor teórico es $R = 1/(2 \pi \cdot 12 \, [kHz] \cdot 1.5 \, [nF]) = 8.84 \, [k\Omega]$. Sin embargo, el producto ganancia-ancho de banda finito del LM324 ($1 \, [MHz]$) hace que el amplificador de ganancia $3$ tenga un ancho de banda de unos $333 \, [kHz]$ e introduzca un retardo de fase de aproximadamente $2^\circ$ a $12 \, [kHz]$. La red de Wien debe compensarlo con un adelanto de fase, que según la \autoref{eq:wien} sólo se obtiene por debajo de $\omega_0$; como la pendiente de fase de la red en $\omega_0$ es de $-2/3 \, [rad]$ por unidad de frecuencia normalizada, la oscilación se desplaza aproximadamente un $5 \, [\%]$ hacia abajo.
+
+Para compensar este efecto se simuló el circuito con distintos valores de $R$ de la serie E96 (\autoref{tab:ajuste_osc}), midiendo la frecuencia con $200$ ciclos en régimen permanente.
+
+\begin{table}[H]
+    \centering
+    \caption{Ajuste de la frecuencia de oscilación en simulación ($C = 1.5 \, [nF]$).}
+    \label{tab:ajuste_osc}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        $\boldsymbol{R}$ & $\boldsymbol{f_{osc}}$ \textbf{simulada} & \textbf{Error respecto de 12 kHz} \\
+        \hline
+        $8.06 \, [k\Omega]$ & $12310.6 \, [Hz]$ & $+310.6 \, [Hz]$ \\
+        $\mathbf{8.25 \, [k\Omega]}$ & $\mathbf{12042.6 \, [Hz]}$ & $\mathbf{+42.6 \, [Hz]}$ \\
+        $8.45 \, [k\Omega]$ & $11772.7 \, [Hz]$ & $-227.3 \, [Hz]$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Se adopta $R = 8.25 \, [k\Omega]$, con el que la frecuencia de oscilación es $12042.6 \, [Hz]$, dentro de la tolerancia de $\pm 100 \, [Hz]$ exigida.
+
+\subsection{Simulación}
+\label{sec_4.4}
+El circuito se simuló en LTspice con el macromodelo \texttt{LM324/NS} y diodos 1N4148, partiendo de una condición inicial de $10 \, [mV]$ en la entrada no inversora. En la \autoref{fig:osc_arranque} se observa que la oscilación crece exponencialmente y se estabiliza en menos de $1 \, [ms]$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{osc_arranque.png}
+    \caption{Arranque del oscilador.}
+    \label{fig:osc_arranque}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{osc_permanente.png}
+    \caption{Tensión de salida en régimen permanente.}
+    \label{fig:osc_perm}
+\end{figure}
+
+En régimen permanente (\autoref{fig:osc_perm}) la amplitud es de $2.85 \, [V]$ de pico, en concordancia con la estimación de la \autoref{eq:amplitud}. La distorsión armónica total, calculada sobre $9$ armónicos, es del $3.0 \, [\%]$, dominada por el tercer armónico ($2.97 \, [\%]$), como corresponde a la alinealidad simétrica introducida por los diodos (\autoref{fig:osc_espectro}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{osc_espectro.png}
+    \caption{Espectro de la tensión de salida en régimen permanente.}
+    \label{fig:osc_espectro}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Resultados del oscilador.}
+    \label{tab:osc}
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Parámetro} & \textbf{Valor} \\
+        \hline
+        Frecuencia de oscilación & $12042.6 \, [Hz]$ ($+0.35 \, [\%]$) \\
+        Amplitud de salida & $2.85 \, [V]$ de pico \\
+        Distorsión armónica total & $3.0 \, [\%]$ \\
+        Tiempo de establecimiento & $< 1 \, [ms]$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Consideraciones de Implementación}
+\label{sec_4.5}
+Como $f_0 \propto (R_1 R_2 C_1 C_2)^{-1/2}$, la sensibilidad de la frecuencia respecto de cada uno de los cuatro elementos de la red es $-1/2$. Con resistencias del $1 \, [\%]$ y capacitores del $5 \, [\%]$, la desviación de peor caso es de $\pm 6 \, [\%]$ ($\pm 720 \, [Hz]$), muy superior a la tolerancia pedida. Por lo tanto, en una implementación física es necesario un ajuste, por ejemplo reemplazando $R_2$ por una resistencia de $7.5 \, [k\Omega]$ en serie con un preset de $1 \, [k\Omega]$. La variación de $R_2$ altera levemente la atenuación de la red, pero el lazo de control de amplitud lo compensa. Si se requiriera menor distorsión, los diodos pueden reemplazarse por un elemento de resistencia variable controlado por la amplitud, como un JFET o una lámpara incandescente \cite{sloa060}.

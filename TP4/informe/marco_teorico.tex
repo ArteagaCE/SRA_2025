@@ -1,0 +1,130 @@
+\section{Marco Teórico}
+\label{sec_2}
+
+\subsection{Aproximación de Chebyshev}
+\label{sec_2.1}
+El problema de la aproximación consiste en encontrar una función de transferencia realizable cuya respuesta en módulo quede contenida dentro de la plantilla de requerimientos. La aproximación de Chebyshev (tipo I) propone, para el filtro pasabajos normalizado, una respuesta de la forma \cite{huelsman, schaumann}:
+\begin{equation}
+    |H(j\Omega)|^2 = \frac{1}{1 + \varepsilon^2 \, C_n^2(\Omega)}
+    \label{eq:cheby}
+\end{equation}
+donde $C_n(\Omega)$ es el polinomio de Chebyshev de orden $n$, que oscila entre $-1$ y $1$ para $|\Omega| \leq 1$ y crece monótonamente para $|\Omega| > 1$:
+\begin{equation}
+    C_n(\Omega) =
+    \begin{cases}
+        \cos\left(n \arccos \Omega\right)            & |\Omega| \leq 1 \\
+        \cosh\left(n \, \mathrm{arccosh} \, \Omega\right) & |\Omega| > 1
+    \end{cases}
+\end{equation}
+
+En consecuencia, la atenuación en la banda de paso oscila entre $0$ y $A_p$ (\textit{equiripple}), donde el parámetro $\varepsilon$ fija la amplitud del rizado:
+\begin{equation}
+    \varepsilon = \sqrt{10^{A_p/10} - 1}
+    \label{eq:eps}
+\end{equation}
+
+Exigiendo una atenuación mínima $A_s$ en la frecuencia normalizada de rechazo $\Omega_s$, el orden mínimo necesario resulta:
+\begin{equation}
+    n \geq \frac{\mathrm{arccosh}\sqrt{\dfrac{10^{A_s/10} - 1}{10^{A_p/10} - 1}}}{\mathrm{arccosh} \, \Omega_s}
+    \label{eq:orden}
+\end{equation}
+
+Frente a la aproximación de Butterworth, la de Chebyshev concentra el error de aproximación de manera uniforme en toda la banda de paso, lo que le permite lograr una transición más abrupta con el mismo orden. Como contrapartida, sus polos poseen factores de calidad más elevados.
+
+\subsection{Transformación Pasabajos -- Pasabanda}
+\label{sec_2.2}
+El filtro pasabanda se obtiene a partir del prototipo pasabajos normalizado mediante la transformación de frecuencia \cite{huelsman}:
+\begin{equation}
+    s_{PB} = \frac{s^2 + \omega_0^2}{B \, s}, \qquad \omega_0 = \sqrt{\omega_{p1} \, \omega_{p2}}, \qquad B = \omega_{p2} - \omega_{p1}
+    \label{eq:transf}
+\end{equation}
+donde $\omega_{p1}$ y $\omega_{p2}$ son los bordes de la banda de paso. La transformación duplica el orden: cada par de polos complejos del prototipo genera dos pares de polos del pasabanda, ubicados de forma geométricamente simétrica respecto de $\omega_0$. La frecuencia de rechazo normalizada del prototipo se obtiene como:
+\begin{equation}
+    \Omega_s = \min_{i} \frac{\left|\omega_{s,i}^2 - \omega_0^2\right|}{B \, \omega_{s,i}}
+    \label{eq:omegas}
+\end{equation}
+
+\subsection{Secciones Bicuadráticas Sallen-Key}
+\label{sec_2.3}
+Una función de transferencia de orden par puede factorizarse en el producto de funciones de segundo orden (bicuadráticas), cada una caracterizada por la frecuencia del polo $\omega_p$ y su factor de calidad $Q_p$:
+\begin{equation}
+    T(s) = \prod_{i} \frac{N_i(s)}{s^2 + \dfrac{\omega_{p,i}}{Q_{p,i}} \, s + \omega_{p,i}^2}
+\end{equation}
+
+Cada sección se implementa con una celda activa y luego se conectan en cascada. Dado que la impedancia de salida de un amplificador operacional realimentado es prácticamente nula, las etapas no se cargan entre sí y la transferencia total es el producto de las individuales.
+
+La topología \textit{Sallen-Key} \cite{sallenkey} utiliza realimentación positiva a través de un capacitor (pasabajos) o una resistencia (pasaaltos) conectado a la salida de un amplificador de ganancia $K$. En este trabajo se emplea la variante de \textbf{ganancia unitaria} ($K = 1$, seguidor de tensión), que es la menos sensible a las variaciones de los componentes y no requiere resistencias adicionales en la red de realimentación negativa.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \begin{circuitikz}[scale=0.75, transform shape]
+            \draw (5.2,0) node[op amp, noinv input up, anchor=+] (U) {};
+            \draw (0,0) node[left]{$V_i$} to[R, l=$R_1$, o-*] (2,0) to[R, l=$R_2$, -*] (4,0) -- (U.+);
+            \draw (4,0) to[C, l_=$C_2$] (4,-2) node[ground]{};
+            \draw (2,0) -- (2,2) to[C, l=$C_1$] ($(U.out)+(0.5,2)$) |- (U.out);
+            \draw (U.-) -- ++(-0.3,0) |- ($(U.out)+(0,-1.3)$) -- (U.out);
+            \draw (U.out) to[short, *-o] ++(1,0) node[right]{$V_o$};
+        \end{circuitikz}
+        \caption{Pasabajos.}
+        \label{fig:sk_pb}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \begin{circuitikz}[scale=0.75, transform shape]
+            \draw (5.2,0) node[op amp, noinv input up, anchor=+] (U) {};
+            \draw (0,0) node[left]{$V_i$} to[C, l=$C_3$, o-*] (2,0) to[C, l=$C_4$, -*] (4,0) -- (U.+);
+            \draw (4,0) to[R, l_=$R_4$] (4,-2) node[ground]{};
+            \draw (2,0) -- (2,2) to[R, l=$R_3$] ($(U.out)+(0.5,2)$) |- (U.out);
+            \draw (U.-) -- ++(-0.3,0) |- ($(U.out)+(0,-1.3)$) -- (U.out);
+            \draw (U.out) to[short, *-o] ++(1,0) node[right]{$V_o$};
+        \end{circuitikz}
+        \caption{Pasaaltos.}
+        \label{fig:sk_pa}
+    \end{subfigure}
+    \caption{Celdas bicuadráticas Sallen-Key de ganancia unitaria.}
+    \label{fig:sk}
+\end{figure}
+
+Para el \textbf{pasabajos} de la \autoref{fig:sk_pb}, con $R_1$ y $R_2$ en serie y $C_1$ conectado a la salida, el análisis nodal conduce a:
+\begin{equation}
+    T_{PB}(s) = \frac{\dfrac{1}{R_1 R_2 C_1 C_2}}{s^2 + \dfrac{R_1 + R_2}{R_1 R_2 C_1} \, s + \dfrac{1}{R_1 R_2 C_1 C_2}}, \qquad
+    \omega_p = \frac{1}{\sqrt{R_1 R_2 C_1 C_2}}, \qquad
+    Q_p = \frac{\sqrt{R_1 R_2 C_1 C_2}}{C_2 \left(R_1 + R_2\right)}
+    \label{eq:sk_pb}
+\end{equation}
+
+Para el \textbf{pasaaltos} de la \autoref{fig:sk_pa}, con $C_3$ y $C_4$ en serie, $R_3$ conectada a la salida y $R_4$ a masa:
+\begin{equation}
+    T_{PA}(s) = \frac{s^2}{s^2 + \dfrac{C_3 + C_4}{R_4 C_3 C_4} \, s + \dfrac{1}{R_3 R_4 C_3 C_4}}, \qquad
+    \omega_p = \frac{1}{\sqrt{R_3 R_4 C_3 C_4}}, \qquad
+    Q_p = \frac{\sqrt{R_3 R_4 C_3 C_4}}{R_3 \left(C_3 + C_4\right)}
+    \label{eq:sk_pa}
+\end{equation}
+
+Con $R_1 = R_2$ en el pasabajos y $C_3 = C_4$ en el pasaaltos, el factor de calidad depende sólo de un cociente de componentes:
+\begin{equation}
+    Q_{PB} = \frac{1}{2}\sqrt{\frac{C_1}{C_2}}, \qquad Q_{PA} = \frac{1}{2}\sqrt{\frac{R_4}{R_3}}
+    \label{eq:q_cociente}
+\end{equation}
+por lo que un $Q_p$ elevado exige una dispersión de valores de $4 Q_p^2$.
+
+\subsection{Sensibilidad y Tolerancias}
+\label{sec_2.4}
+La sensibilidad relativa de un parámetro $y$ respecto de un elemento $x$ se define como \cite{schaumann}:
+\begin{equation}
+    S_x^y = \frac{x}{y} \, \frac{\partial y}{\partial x} \approx \frac{\Delta y / y}{\Delta x / x}
+    \label{eq:sens}
+\end{equation}
+y cumple las propiedades $S_x^{y_1 y_2} = S_x^{y_1} + S_x^{y_2}$, $S_x^{1/y} = -S_x^y$ y $S_x^{y^k} = k \, S_x^y$. Para una variación de todos los componentes, la desviación relativa de $y$ se aproxima a primer orden por:
+\begin{equation}
+    \frac{\Delta y}{y} \approx \sum_i S_{x_i}^{y} \, \frac{\Delta x_i}{x_i}
+    \qquad \Rightarrow \qquad
+    \left|\frac{\Delta y}{y}\right|_{max} \approx \delta \sum_i \left|S_{x_i}^{y}\right|
+    \label{eq:peor}
+\end{equation}
+donde $\delta$ es la tolerancia de los componentes. El peor caso se da cuando cada componente se desvía hacia el extremo de su tolerancia que hace que su contribución tenga el mismo signo que las demás.
+
+El análisis de peor caso es conservador, ya que la probabilidad de que todos los componentes se ubiquen simultáneamente en el extremo desfavorable es muy baja. La simulación de \textbf{Montecarlo} complementa este análisis asignando a cada componente un valor aleatorio dentro de su tolerancia y repitiendo la simulación un número elevado de veces, lo que permite estimar la dispersión estadística de la respuesta y el rendimiento de fabricación (porcentaje de circuitos que cumplen la especificación).
