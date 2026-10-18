@@ -20,6 +20,17 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{arrows.meta, decorations.pathreplacing, calc, positioning}
+\usepackage{listings}
+\usepackage{xcolor}
+\lstdefinestyle{codigo}{
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!45!black},
+    stringstyle=\color{red!60!black},
+    numbers=left, numberstyle=\tiny\color{gray},
+    frame=single, breaklines=true, showstringspaces=false,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {±}{{$\pm$}}1
+}
 \usepackage[style=ieee, backend=bibtex]{biblatex}
 \addbibresource{bibliografia.bib}
 \graphicspath{{Figuras/}{../figs/}}
@@ -87,16 +98,43 @@
 
 \section{Introducción}
 \label{sec_1}
-El presente trabajo práctico aborda la síntesis de un filtro activo pasabanda a partir de una plantilla de requerimientos de atenuación provista por la Cátedra \cite{guia}. El filtro debe dejar pasar la banda comprendida entre $800 \, [Hz]$ y $1250 \, [Hz]$ con una atenuación máxima de $0.25 \, [dB]$, y atenuar al menos $30 \, [dB]$ las frecuencias inferiores a $200 \, [Hz]$ y superiores a $5 \, [kHz]$.
+El objetivo de este trabajo es sintetizar un filtro activo que satisfaga la plantilla de requerimientos de la Cátedra \cite{guia}, reproducida en la \autoref{tab:plantilla}.
 
-El diseño se realiza aproximando la función de atenuación mediante polinomios de Chebyshev y sintetizando la función de transferencia resultante con dos secciones bicuadráticas \textit{Sallen-Key} de realimentación positiva implementadas con amplificadores operacionales LM324. Sobre el circuito obtenido se calculan las sensibilidades de la frecuencia del polo y del ancho de banda de cada bicuadrática, se analiza la peor desviación con componentes de $10 \, [\%]$ de tolerancia y se realiza una simulación de Montecarlo en LTspice \cite{ltspice}.
+\begin{table}[H]
+    \centering
+    \caption{Plantilla de requerimientos del filtro.}
+    \label{tab:plantilla}
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Requerimiento} & \textbf{Valor} \\
+        \hline
+        Banda de paso & $800$ a $1250 \, [Hz]$ \\
+        Atenuación máxima en la banda de paso ($A_p$) & $0.25 \, [dB]$ \\
+        Bandas de rechazo & $f \leq 200 \, [Hz]$ y $f \geq 5 \, [kHz]$ \\
+        Atenuación mínima en las bandas de rechazo ($A_s$) & $30 \, [dB]$ \\
+        \hline
+    \end{tabular}
+\end{table}
 
-El trabajo se organiza de la siguiente manera. En la \autoref{sec_2} se presentan los fundamentos teóricos. En la \autoref{sec_3} se desarrollan la aproximación, la síntesis del circuito, las simulaciones y los análisis de sensibilidad y tolerancia, junto con las condiciones de operación límite. En la \autoref{sec_4} se resuelve el ejercicio adicional: un oscilador senoidal de $12 \, [kHz]$. Finalmente, en la \autoref{sec_5} se presentan las conclusiones.
+La consigna pide aproximar la función de atenuación con polinomios de Chebyshev, sintetizar el circuito con bicuadráticas de realimentación positiva o negativa, simular cada etapa y el filtro completo, calcular las sensibilidades de la frecuencia del polo y del ancho de banda de cada bicuadrática, analizar la peor desviación con componentes del $10 \, [\%]$ y realizar una simulación de Montecarlo. Como ejercicio adicional, se pide diseñar un oscilador de $12 \, [kHz]$ y ajustarlo a $\pm 100 \, [Hz]$.
+
+El filtro se implementó con celdas Sallen-Key de componentes iguales, siguiendo el método de síntesis de Daryanani \cite{daryanani}, y se simuló en LTspice \cite{ltspice}. Además de lo solicitado, el trabajo incluye los siguientes agregados:
+\begin{itemize}
+    \item La automatización de todas las simulaciones con Python y la biblioteca \texttt{spicelib}, que permitió ejecutar miles de corridas a partir del esquemático y detectar las inestables.
+    \item La comparación con una implementación de ganancia unitaria de la misma función de transferencia.
+    \item El estudio del cumplimiento de la plantilla en función de la tolerancia de los componentes.
+    \item El efecto del amplificador real (LM324) frente al ideal.
+\end{itemize}
+
+El trabajo se organiza de la siguiente manera. En la \autoref{sec_2} se presentan los fundamentos teóricos. En la \autoref{sec_3} se desarrollan la aproximación, la síntesis, la simulación y los análisis de sensibilidad, peor caso y Montecarlo pedidos en la consigna. En la \autoref{sec_4} se presentan los agregados, en la \autoref{sec_5} el ejercicio adicional y en la \autoref{sec_6} las conclusiones. Los anexos contienen el código utilizado.
 
 \input{marco_teorico.tex}
 \newpage
 
 \input{desarrollo.tex}
+\newpage
+
+\input{agregados.tex}
 \newpage
 
 \input{oscilador.tex}
@@ -107,4 +145,25 @@ El trabajo se organiza de la siguiente manera. En la \autoref{sec_2} se presenta
 \newpage
 \nocite{*}
 \printbibliography[heading=bibintoc, title={Bibliografía y Referencias}]
+
+\newpage
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+\section{Anexo: Script de MATLAB}
+\label{anexo_matlab}
+Aproximación de Chebyshev y descomposición en bicuadráticas, basada en el script del anexo de la guía (archivo \texttt{aproximacion\_tp4.m}).
+\lstinputlisting[style=codigo, language=Matlab]{../scripts/aproximacion_tp4.m}
+
+\section{Anexo: Automatización de las Simulaciones}
+\label{anexo_python}
+Fragmentos del script \texttt{simular\_tp4.py}. El código completo, junto con \texttt{spice\_tp4.py}, \texttt{graficos\_tp4.py} y \texttt{abrir\_figura.py}, se encuentra en el repositorio del trabajo.
+
+\subsubsection*{Ejecución de un lote de corridas en una sola simulación de LTspice}
+\lstinputlisting[style=codigo, language=Python, firstline=71, lastline=89]{../scripts/simular_tp4.py}
+
+\subsubsection*{Polos de cada corrida (detección de inestabilidad)}
+\lstinputlisting[style=codigo, language=Python, firstline=99, lastline=110]{../scripts/simular_tp4.py}
+
+\subsubsection*{Estudio de Montecarlo}
+\lstinputlisting[style=codigo, language=Python, firstline=172, lastline=194]{../scripts/simular_tp4.py}
 \end{document}

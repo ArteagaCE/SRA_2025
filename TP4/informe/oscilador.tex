@@ -1,18 +1,17 @@
 \section{Ejercicio Adicional: Oscilador de 12 kHz}
-\label{sec_4}
-Se pide diseñar un oscilador de $f = 12 \, [kHz]$ con capacitores, resistores, una fuente de $\pm 12 \, [V]$ y un LM324, y ajustarlo en simulación a una tolerancia de $\pm 100 \, [Hz]$.
+\label{sec_5}
+La consigna pide diseñar un oscilador de $f = 12 \, [kHz]$ con capacitores, resistores, una fuente de $\pm 12 \, [V]$ y un LM324, y ajustarlo en simulación a una tolerancia de $\pm 100 \, [Hz]$.
 
 \subsection{Oscilador Puente de Wien}
-\label{sec_4.1}
-Se adopta el oscilador puente de Wien \cite{sedra, sloa060} de la \autoref{fig:wien}, en el que un amplificador no inversor de ganancia $A = 1 + R_f / R_g$ se realimenta positivamente a través de una red $RC$ serie--paralelo. Con $R_1 = R_2 = R$ y $C_1 = C_2 = C$, la transferencia de la red es:
+\label{sec_5.1}
+Se adopta el oscilador puente de Wien \cite[sec.~8.1]{apuntes8}, \cite{sedra, sloa060} de la \autoref{fig:wien}: un amplificador no inversor de ganancia $A = 1 + R_f/R_g$ realimentado positivamente a través de una red $RC$ serie--paralelo. Con $R_1 = R_2 = R$ y $C_1 = C_2 = C$, la transferencia de la red es
 \begin{equation}
     \beta(j\omega) = \frac{V_p}{V_{out}} = \frac{1}{3 + j\left(\dfrac{\omega}{\omega_0} - \dfrac{\omega_0}{\omega}\right)}, \qquad \omega_0 = \frac{1}{RC}
     \label{eq:wien}
 \end{equation}
-
-A la frecuencia $\omega_0$ la red no introduce desfasaje y atenúa $1/3$. Por el criterio de Barkhausen ($A \beta = 1$), el circuito oscila en:
+A la frecuencia $\omega_0$ la red no desfasa y atenúa $1/3$, de modo que por el criterio de Barkhausen ($A\beta = 1$) el circuito oscila en
 \begin{equation}
-    f_0 = \frac{1}{2 \pi R C}, \qquad A = 1 + \frac{R_f}{R_g} = 3
+    f_0 = \frac{1}{2 \pi R C} \qquad \text{con} \qquad A = 1 + \frac{R_f}{R_g} = 3
 \end{equation}
 
 \begin{figure}[H]
@@ -31,78 +30,89 @@ A la frecuencia $\omega_0$ la red no introduce desfasaje y atenúa $1/3$. Por el
         \draw (U.out) -- (U.out -| T2) node[circ]{} to[short, -o] ++(1,0) node[right]{$V_{out}$};
         \draw (T2) -- (M2);
     \end{circuitikz}
-    \caption{Oscilador puente de Wien con control de amplitud por diodos ($D_1$, $D_2$: 1N4148).}
+    \caption{Oscilador puente de Wien con control de amplitud por diodos ($D_1$, $D_2$: 1N4148; LM324 con $\pm 12 \, [V]$).}
     \label{fig:wien}
 \end{figure}
 
-\subsection{Control de Amplitud}
-\label{sec_4.2}
-Para garantizar el arranque, la ganancia inicial debe ser algo mayor que $3$; si se mantuviera constante, la amplitud crecería hasta saturar el amplificador. Por ello, la resistencia de realimentación se divide en $R_{f1}$ y $R_{f2}$, y esta última se pone en paralelo con dos diodos en antiparalelo. Con señales pequeñas los diodos no conducen y la ganancia es:
+\subsection{Control de Amplitud y Límite por Slew Rate}
+\label{sec_5.2}
+Para que la oscilación arranque, la ganancia inicial debe superar levemente a $3$; si se mantuviera constante, la amplitud crecería hasta saturar el amplificador. Por eso la resistencia de realimentación se divide en $R_{f1}$ y $R_{f2}$, y sobre $R_{f2}$ se colocan dos diodos en antiparalelo. Con señal pequeña los diodos no conducen y
 \begin{equation}
     A_0 = 1 + \frac{R_{f1} + R_{f2}}{R_g} = 1 + \frac{15 + 6.8}{10} = 3.18
 \end{equation}
-es decir, un $6 \, [\%]$ por encima del valor crítico. A medida que la amplitud crece, los diodos comienzan a conducir en los picos y reducen la resistencia equivalente de $R_{f2}$ hasta que la ganancia efectiva vale $3$, lo que ocurre cuando $R_{f2,ef} = 2 R_g - R_{f1} = 5 \, [k\Omega]$. En esa condición la tensión en $R_{f2}$ es aproximadamente la de conducción de los diodos ($V_D \approx 0.5 \, [V]$), y la amplitud de salida resulta:
+un $6 \, [\%]$ por encima del valor crítico. Al crecer la amplitud, los diodos conducen en los picos y reducen la resistencia equivalente de $R_{f2}$ hasta que la ganancia efectiva vale $3$, es decir, hasta que $R_{f2,ef} = 2R_g - R_{f1} = 5 \, [k\Omega]$. En esa condición la tensión sobre $R_{f2}$ es del orden de la de conducción de los diodos ($V_D \approx 0.5 \, [V]$), y como la corriente de la rama es $V_{out}/(3R_g)$:
 \begin{equation}
-    V_{out,pico} \approx V_D \, \frac{3 R_g}{R_{f2,ef}} = 0.5 \, [V] \cdot \frac{30 \, [k\Omega]}{5 \, [k\Omega]} = 3 \, [V]
+    V_{out,p} \approx V_D \, \frac{3 R_g}{R_{f2,ef}} = 0.5 \, [V] \cdot \frac{30 \, [k\Omega]}{5 \, [k\Omega]} = 3 \, [V]
     \label{eq:amplitud}
 \end{equation}
 
-Limitar la amplitud es necesario también por el \textit{slew rate} del LM324. La máxima amplitud sin distorsión por velocidad de respuesta a $12 \, [kHz]$ es:
+La amplitud debe quedar además por debajo de la que permite el \textit{slew rate} del LM324 ($0.5 \, [V/\mu s]$ típico \cite[sec.~6.10]{lm324}) a $12 \, [kHz]$:
 \begin{equation}
     V_{max} = \frac{SR}{2 \pi f_0} = \frac{0.5 \, [V/\mu s]}{2 \pi \cdot 12 \, [kHz]} = 6.6 \, [V]
 \end{equation}
 
-Un primer diseño con $R_{f1} = 18 \, [k\Omega]$ y $R_{f2} = 4.7 \, [k\Omega]$ alcanzaba una amplitud de $7.8 \, [V]$: el amplificador quedaba limitado por \textit{slew rate}, la distorsión armónica total superaba el $10 \, [\%]$ y la frecuencia caía a $10.8 \, [kHz]$. Por eso se adoptaron los valores de la \autoref{fig:wien}.
+\subsection{Ajuste de la Frecuencia}
+\label{sec_5.3}
+Con $C = 1.5 \, [nF]$, el valor teórico es $R = 1/(2\pi \cdot 12 \, [kHz] \cdot 1.5 \, [nF]) = 8.84 \, [k\Omega]$. Sin embargo, el LM324 ($GBW = 1 \, [MHz]$ en el macromodelo utilizado; $1.2 \, [MHz]$ típico según la hoja de datos \cite[sec.~6.10]{lm324}) configurado con ganancia $3$ tiene un ancho de banda de unos $333 \, [kHz]$ e introduce un retardo de fase de aproximadamente $2^\circ$ a $12 \, [kHz]$. Como señalan los apuntes de la cátedra \cite[sec.~8.1]{apuntes8}, el desfasaje del polo del amplificador comienza a notarse una década antes de ese polo; si la frecuencia de oscilación cae en esa zona, la red $RC$ debe compensarlo para satisfacer la condición de fase, y la oscilación se produce a una frecuencia menor que la ideal. En la red de Wien, esa compensación solo ocurre por debajo de $\omega_0$ (\autoref{eq:wien}). Como la pendiente de fase de la red en $\omega_0$ es de $-2/3 \, [rad]$ por unidad de frecuencia normalizada, el corrimiento esperado es de aproximadamente $5 \, [\%]$.
 
-\subsection{Diseño y Ajuste de la Frecuencia}
-\label{sec_4.3}
-Con $C = 1.5 \, [nF]$, el valor teórico es $R = 1/(2 \pi \cdot 12 \, [kHz] \cdot 1.5 \, [nF]) = 8.84 \, [k\Omega]$. Sin embargo, el producto ganancia-ancho de banda finito del LM324 ($1 \, [MHz]$) hace que el amplificador de ganancia $3$ tenga un ancho de banda de unos $333 \, [kHz]$ e introduzca un retardo de fase de aproximadamente $2^\circ$ a $12 \, [kHz]$. La red de Wien debe compensarlo con un adelanto de fase, que según la \autoref{eq:wien} sólo se obtiene por debajo de $\omega_0$; como la pendiente de fase de la red en $\omega_0$ es de $-2/3 \, [rad]$ por unidad de frecuencia normalizada, la oscilación se desplaza aproximadamente un $5 \, [\%]$ hacia abajo.
-
-Para compensar este efecto se simuló el circuito con distintos valores de $R$ de la serie E96 (\autoref{tab:ajuste_osc}), midiendo la frecuencia con $200$ ciclos en régimen permanente.
+Para ajustar la frecuencia se simuló el circuito con los valores de la serie E96 entre $7.87$ y $9.09 \, [k\Omega]$, midiendo la frecuencia sobre $200$ ciclos de régimen permanente (\autoref{tab:ajuste_osc} y \autoref{fig:osc_ajuste}).
 
 \begin{table}[H]
     \centering
-    \caption{Ajuste de la frecuencia de oscilación en simulación ($C = 1.5 \, [nF]$).}
+    \caption{Barrido de $R$ ($C = 1.5 \, [nF]$, LM324).}
     \label{tab:ajuste_osc}
-    \begin{tabular}{|c|c|c|}
+    \begin{tabular}{|c|c|c|c|}
         \hline
-        $\boldsymbol{R}$ & $\boldsymbol{f_{osc}}$ \textbf{simulada} & \textbf{Error respecto de 12 kHz} \\
+        $\boldsymbol{R}$ & $\boldsymbol{f_{osc}}$ \textbf{simulada} & \textbf{Error respecto de 12 kHz} & \textbf{THD} \\
         \hline
-        $8.06 \, [k\Omega]$ & $12310.6 \, [Hz]$ & $+310.6 \, [Hz]$ \\
-        $\mathbf{8.25 \, [k\Omega]}$ & $\mathbf{12042.6 \, [Hz]}$ & $\mathbf{+42.6 \, [Hz]}$ \\
-        $8.45 \, [k\Omega]$ & $11772.7 \, [Hz]$ & $-227.3 \, [Hz]$ \\
+        $7.87 \, [k\Omega]$ & $12590.9 \, [Hz]$ & $+590.9 \, [Hz]$ & $2.98 \, [\%]$ \\
+        $8.06 \, [k\Omega]$ & $12310.8 \, [Hz]$ & $+310.8 \, [Hz]$ & $2.98 \, [\%]$ \\
+        $\mathbf{8.25 \, [k\Omega]}$ & $\mathbf{12042.6 \, [Hz]}$ & $\mathbf{+42.6 \, [Hz]}$ & $\mathbf{2.99 \, [\%]}$ \\
+        $8.45 \, [k\Omega]$ & $11772.8 \, [Hz]$ & $-227.2 \, [Hz]$ & $3.00 \, [\%]$ \\
+        $8.66 \, [k\Omega]$ & $11502.1 \, [Hz]$ & $-497.9 \, [Hz]$ & $3.00 \, [\%]$ \\
+        $8.87 \, [k\Omega]$ & $11243.7 \, [Hz]$ & $-756.3 \, [Hz]$ & $3.01 \, [\%]$ \\
+        $9.09 \, [k\Omega]$ & $10985.2 \, [Hz]$ & $-1014.8 \, [Hz]$ & $3.01 \, [\%]$ \\
         \hline
     \end{tabular}
 \end{table}
 
-Se adopta $R = 8.25 \, [k\Omega]$, con el que la frecuencia de oscilación es $12042.6 \, [Hz]$, dentro de la tolerancia de $\pm 100 \, [Hz]$ exigida.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{osc_ajuste_R.png}
+    \caption{Frecuencia de oscilación en función de $R$, simulada y teórica.}
+    \label{fig:osc_ajuste}
+\end{figure}
+
+Con el valor teórico ($8.87 \, [k\Omega]$ en la serie E96) el circuito oscila en $11244 \, [Hz]$, un $6 \, [\%]$ por debajo de lo esperado, como anticipaba el análisis de fase. Se adopta $R = 8.25 \, [k\Omega]$, con el que la frecuencia resulta $12042.6 \, [Hz]$, dentro de la tolerancia de $\pm 100 \, [Hz]$.
 
 \subsection{Simulación}
-\label{sec_4.4}
-El circuito se simuló en LTspice con el macromodelo \texttt{LM324/NS} y diodos 1N4148, partiendo de una condición inicial de $10 \, [mV]$ en la entrada no inversora. En la \autoref{fig:osc_arranque} se observa que la oscilación crece exponencialmente y se estabiliza en menos de $1 \, [ms]$.
+\label{sec_5.4}
+El circuito se simuló con el macromodelo \texttt{LM324/NS} y diodos 1N4148, partiendo de una condición inicial de $10 \, [mV]$ en la entrada no inversora. La oscilación crece y se estabiliza en menos de $1 \, [ms]$ (\autoref{fig:osc_arranque}).
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{osc_arranque.png}
+    \includegraphics[width=0.8\textwidth]{osc_arranque.png}
     \caption{Arranque del oscilador.}
     \label{fig:osc_arranque}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{osc_permanente.png}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{osc_permanente.png}
+        \caption{Régimen permanente.}
+        \label{fig:osc_perm}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{osc_espectro.png}
+        \caption{Contenido armónico.}
+        \label{fig:osc_espectro}
+    \end{subfigure}
     \caption{Tensión de salida en régimen permanente.}
-    \label{fig:osc_perm}
 \end{figure}
 
-En régimen permanente (\autoref{fig:osc_perm}) la amplitud es de $2.85 \, [V]$ de pico, en concordancia con la estimación de la \autoref{eq:amplitud}. La distorsión armónica total, calculada sobre $9$ armónicos, es del $3.0 \, [\%]$, dominada por el tercer armónico ($2.97 \, [\%]$), como corresponde a la alinealidad simétrica introducida por los diodos (\autoref{fig:osc_espectro}).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{osc_espectro.png}
-    \caption{Espectro de la tensión de salida en régimen permanente.}
-    \label{fig:osc_espectro}
-\end{figure}
+En régimen permanente la amplitud es de $2.85 \, [V]$ de pico, en acuerdo con la estimación de la \autoref{eq:amplitud}. La distorsión armónica total, calculada sobre $9$ armónicos mediante un ajuste por mínimos cuadrados sobre los últimos $10 \, [ms]$, es del $3.0 \, [\%]$, dominada por el tercer armónico ($-30.5 \, [dB]$), como corresponde a la alinealidad simétrica de los diodos.
 
 \begin{table}[H]
     \centering
@@ -120,6 +130,28 @@ En régimen permanente (\autoref{fig:osc_perm}) la amplitud es de $2.85 \, [V]$ 
     \end{tabular}
 \end{table}
 
-\subsection{Consideraciones de Implementación}
-\label{sec_4.5}
-Como $f_0 \propto (R_1 R_2 C_1 C_2)^{-1/2}$, la sensibilidad de la frecuencia respecto de cada uno de los cuatro elementos de la red es $-1/2$. Con resistencias del $1 \, [\%]$ y capacitores del $5 \, [\%]$, la desviación de peor caso es de $\pm 6 \, [\%]$ ($\pm 720 \, [Hz]$), muy superior a la tolerancia pedida. Por lo tanto, en una implementación física es necesario un ajuste, por ejemplo reemplazando $R_2$ por una resistencia de $7.5 \, [k\Omega]$ en serie con un preset de $1 \, [k\Omega]$. La variación de $R_2$ altera levemente la atenuación de la red, pero el lazo de control de amplitud lo compensa. Si se requiriera menor distorsión, los diodos pueden reemplazarse por un elemento de resistencia variable controlado por la amplitud, como un JFET o una lámpara incandescente \cite{sloa060}.
+\subsection{Verificación del Límite por Slew Rate}
+\label{sec_5.5}
+Para mostrar por qué la amplitud debe limitarse, se simuló el circuito con $R_{f1} = 18 \, [k\Omega]$ y $R_{f2} = 4.7 \, [k\Omega]$, que llevan $R_{f2,ef}$ a $2 \, [k\Omega]$ y la amplitud prevista por la \autoref{eq:amplitud} a unos $7.5 \, [V]$. La simulación da $7.54 \, [V]$ de pico. La \autoref{fig:osc_slew} compara ambas versiones junto con la derivada de la salida: con la red elegida la pendiente máxima es de $0.23 \, [V/\mu s]$, mientras que con la red alternativa la derivada se aplana en $\pm 0.49 \, [V/\mu s]$ cerca de los cruces por cero, es decir, el amplificador trabaja a su velocidad máxima.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{osc_slew_rate.png}
+    \caption{Salida y derivada de la salida para las dos redes de control de amplitud.}
+    \label{fig:osc_slew}
+\end{figure}
+
+Como la senoidal de $7.54 \, [V]$ requeriría $2\pi \cdot 11.46 \, [kHz] \cdot 7.54 \, [V] = 0.54 \, [V/\mu s]$, apenas un $8 \, [\%]$ más que el \textit{slew rate}, la forma de onda se deforma poco a simple vista. El efecto principal es sobre la frecuencia: el retardo adicional la hace caer a $11459 \, [Hz]$, $584 \, [Hz]$ por debajo del diseño y fuera de la tolerancia pedida.
+
+\subsection{Sensibilidad a las Tolerancias}
+\label{sec_5.6}
+Como $f_0 \propto (R_1 R_2 C_1 C_2)^{-1/2}$, la sensibilidad de la frecuencia respecto de cada elemento de la red es $-1/2$. Para estimar su efecto se realizó un Montecarlo de $100$ corridas con resistores del $1 \, [\%]$ y capacitores del $5 \, [\%]$ (\autoref{fig:osc_mc}). La frecuencia resultó de $12031 \pm 239 \, [Hz]$ (entre $11546$ y $12645 \, [Hz]$), y solo el $30 \, [\%]$ de los circuitos quedó dentro de $\pm 100 \, [Hz]$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{osc_montecarlo.png}
+    \caption{Distribución de la frecuencia de oscilación con $R$ al $1 \, [\%]$ y $C$ al $5 \, [\%]$.}
+    \label{fig:osc_mc}
+\end{figure}
+
+Por lo tanto, en una implementación física es necesario un elemento de ajuste, por ejemplo reemplazar $R_2$ por una resistencia de $7.5 \, [k\Omega]$ en serie con un preset de $1 \, [k\Omega]$. La variación de $R_2$ altera levemente la atenuación de la red, pero el lazo de control de amplitud lo compensa.

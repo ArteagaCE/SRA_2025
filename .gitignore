@@ -33,3 +33,7 @@ __pycache__/
 *.bcf
 *-blx.bib
 *.run.xml
+
+# Corridas temporales de simular_tp4.py (se regeneran)
+TP4/resultados/corridas/
+TP4/figs/pkl/
