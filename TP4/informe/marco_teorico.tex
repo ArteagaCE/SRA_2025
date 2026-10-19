@@ -1,112 +1,51 @@
-\section{Marco Teórico}
+\section{Introducción Teórica}
 \label{sec_2}
 
-\subsection{Aproximación de Chebyshev}
+\subsection{Aproximación y Transformación}
 \label{sec_2.1}
-Sintetizar un filtro a partir de una plantilla exige primero resolver el problema de la aproximación: encontrar una función de transferencia racional y realizable cuyo módulo quede dentro de las zonas permitidas. La aproximación de Chebyshev (tipo I) propone para el pasabajos normalizado \cite[sec.~4.3]{daryanani}, \cite{huelsman}:
-\begin{equation}
-    |H(j\Omega)|^2 = \frac{1}{1 + \varepsilon^2 \, C_n^2(\Omega)},
-    \qquad
-    C_n(\Omega) =
-    \begin{cases}
-        \cos\left(n \arccos \Omega\right)                 & |\Omega| \leq 1 \\
-        \cosh\left(n \, \mathrm{arccosh} \, \Omega\right) & |\Omega| > 1
-    \end{cases}
-    \label{eq:cheby}
-\end{equation}
-
-Como $C_n(\Omega)$ oscila entre $-1$ y $1$ dentro de la banda de paso, la atenuación oscila entre $0$ y $A_p$ (respuesta \textit{equiripple}), con
+La aproximación de Chebyshev (tipo I) propone para el pasabajos normalizado $|H(j\Omega)|^2 = 1/\left[1 + \varepsilon^2 C_n^2(\Omega)\right]$, donde $C_n$ es el polinomio de Chebyshev de orden $n$ \cite[sec.~4.3]{daryanani}. En la banda de paso la atenuación oscila entre $0$ y $A_p$ (respuesta \textit{equiripple}), lo que permite una transición más abrupta que Butterworth para el mismo orden, a costa de polos con mayor $Q_p$. El rizado y el orden mínimo para una atenuación $A_s$ en la frecuencia normalizada $\Omega_s$ son:
 \begin{equation}
     \varepsilon = \sqrt{10^{A_p/10} - 1}
     \label{eq:eps}
 \end{equation}
-
-Fuera de la banda de paso $C_n$ crece como un coseno hiperbólico, de modo que exigir una atenuación mínima $A_s$ a la frecuencia normalizada $\Omega_s$ fija el orden mínimo:
 \begin{equation}
-    n \geq \frac{\mathrm{arccosh}\sqrt{\dfrac{10^{A_s/10} - 1}{10^{A_p/10} - 1}}}{\mathrm{arccosh} \, \Omega_s}
+    n \geq \frac{\mathrm{arccosh}\sqrt{\left(10^{A_s/10} - 1\right)/\left(10^{A_p/10} - 1\right)}}{\mathrm{arccosh} \, \Omega_s}
     \label{eq:orden}
 \end{equation}
 
-Al repartir el error de aproximación de manera uniforme en toda la banda de paso, Chebyshev logra una transición más abrupta que Butterworth para el mismo orden. El precio es que sus polos tienen factores de calidad más altos y, como se verá, que la respuesta nominal queda exactamente sobre el límite $A_p$.
-
-\subsection{Transformación Pasabajos -- Pasabanda}
-\label{sec_2.2}
-El pasabanda se obtiene del prototipo pasabajos mediante la transformación de frecuencia \cite[sec.~4.7.2]{daryanani}
+El pasabanda se obtiene con la transformación \cite[sec.~4.7.2]{daryanani}
 \begin{equation}
     s_{LP} = \frac{s^2 + \omega_0^2}{B \, s}, \qquad \omega_0 = \sqrt{\omega_{p1} \, \omega_{p2}}, \qquad B = \omega_{p2} - \omega_{p1}
     \label{eq:transf}
 \end{equation}
-donde $\omega_{p1}$ y $\omega_{p2}$ son los bordes de la banda de paso. Cada par de polos del prototipo da lugar a dos pares de polos del pasabanda, geométricamente simétricos respecto de $\omega_0$, por lo que el orden se duplica. La frecuencia de rechazo del prototipo resulta
+que duplica el orden, y la frecuencia de rechazo del prototipo resulta
 \begin{equation}
     \Omega_s = \min_{i} \frac{\left|\omega_{s,i}^2 - \omega_0^2\right|}{B \, \omega_{s,i}}
     \label{eq:omegas}
 \end{equation}
 
-\subsection{Bicuadráticas Sallen-Key de Realimentación Positiva}
+\subsection{Celdas Sallen-Key de Realimentación Positiva}
 \label{sec_2.3}
-La función de transferencia se factoriza en secciones de segundo orden, cada una caracterizada por la frecuencia del polo $\omega_p$ y su factor de calidad $Q_p$:
+La función de transferencia se factoriza en bicuadráticas, caracterizadas por $\omega_p$ y $Q_p$, que se implementan con celdas activas en cascada \cite[sec.~7.2]{daryanani}. En una celda de realimentación positiva, una red $RC$ recibe la entrada y la salida de un amplificador no inversor de ganancia $k = 1 + r_2/r_1$. Si $T_{FF} = N_{FF}/D$ y $T_{FB} = N_{FB}/D$ son las transferencias de la red desde la entrada y desde la salida, la transferencia de la celda es \cite[sec.~7.4.2, ec.~7.18]{daryanani}:
 \begin{equation}
-    T(s) = \prod_i \frac{N_i(s)}{s^2 + \dfrac{\omega_{p,i}}{Q_{p,i}} \, s + \omega_{p,i}^2}
-\end{equation}
-y cada una se implementa con una celda activa (síntesis en cascada \cite[sec.~7.2]{daryanani}). Como la impedancia de salida de un amplificador operacional realimentado es prácticamente nula, las celdas no se cargan entre sí y la transferencia total es el producto de las individuales.
-
-\subsubsection{Formulación general}
-Siguiendo a Daryanani \cite[sec.~7.4.2, pp.~243--245]{daryanani}, una celda de realimentación positiva se compone de una red pasiva $RC$ con dos entradas (la señal $V_{in}$ y la salida $V_o$) y una salida $V^+$, conectada a un amplificador no inversor de ganancia $k = 1 + r_2/r_1$. Por superposición,
-\begin{equation}
-    V^+ = T_{FF} \, V_{in} + T_{FB} \, V_o,
-    \qquad
-    T_{FF} = \left.\frac{V^+}{V_{in}}\right|_{V_o = 0} = \frac{N_{FF}}{D},
-    \qquad
-    T_{FB} = \left.\frac{V^+}{V_o}\right|_{V_{in} = 0} = \frac{N_{FB}}{D}
-\end{equation}
-donde ambas transferencias comparten el denominador $D(s)$ porque provienen del mismo sistema de ecuaciones nodales. Reemplazando $V_o = k V^+$:
-\begin{equation}
-    T_V(s) = \frac{V_o}{V_{in}} = \frac{k \, N_{FF}}{D - k \, N_{FB}}
+    T_V(s) = \frac{k \, N_{FF}}{D - k \, N_{FB}}
     \label{eq:tv}
 \end{equation}
-que corresponde a la Ec.~7.18 de \cite{daryanani}. La realimentación positiva aparece como el término $-k N_{FB}$, que reduce el coeficiente de $s$ del denominador y, con él, eleva el $Q_p$.
-
-\subsubsection{Pasabajos}
-En la celda de la \autoref{fig:sk_pb} \cite[sec.~8.2, fig.~8.3]{daryanani}, $R_1$ y $R_2$ forman el camino serie hasta el terminal $+$, $C_2$ va a masa y $C_1$ cierra la realimentación hacia la salida. Planteando las ecuaciones de nodo en $V_x$ (unión de $R_1$, $R_2$ y $C_1$) y en $V^+$:
-\begin{equation}
-    \begin{bmatrix}
-        \dfrac{1}{R_1} + \dfrac{1}{R_2} + sC_1 & -\dfrac{1}{R_2} \\[2mm]
-        -\dfrac{1}{R_2} & \dfrac{1}{R_2} + sC_2
-    \end{bmatrix}
-    \begin{bmatrix} V_x \\ V^+ \end{bmatrix}
-    =
-    \begin{bmatrix} \dfrac{V_{in}}{R_1} + sC_1 V_o \\[2mm] 0 \end{bmatrix}
-\end{equation}
-y resolviendo por la regla de Cramer:
-\begin{equation}
-    N_{FF} = \frac{1}{R_1 R_2 C_1 C_2}, \qquad
-    N_{FB} = \frac{s}{R_2 C_2}, \qquad
-    D = s^2 + s\left(\frac{1}{R_1 C_1} + \frac{1}{R_2 C_1} + \frac{1}{R_2 C_2}\right) + \frac{1}{R_1 R_2 C_1 C_2}
-\end{equation}
-Con la \autoref{eq:tv}:
+donde el término $-k N_{FB}$ reduce el coeficiente de $s$ del denominador y eleva el $Q_p$. Para las celdas pasabajos y pasaaltos de la \autoref{fig:sk} \cite[secs.~8.2 y 8.3]{daryanani} se obtiene:
 \begin{equation}
     T_{PB}(s) = \frac{\dfrac{k}{R_1 R_2 C_1 C_2}}{s^2 + s\left(\dfrac{1}{R_1 C_1} + \dfrac{1}{R_2 C_1} + \dfrac{1 - k}{R_2 C_2}\right) + \dfrac{1}{R_1 R_2 C_1 C_2}}
     \label{eq:sk_pb}
-\end{equation}
-
-\subsubsection{Pasaaltos}
-La celda pasaaltos (\autoref{fig:sk_pa}) se obtiene intercambiando resistores y capacitores (transformación $RC \rightarrow CR$ \cite[sec.~8.3]{daryanani}): $C_1$ y $C_2$ en serie, $R_2$ del terminal $+$ a masa y $R_1$ hacia la salida. Procediendo del mismo modo:
-\begin{equation}
-    N_{FF} = s^2, \qquad
-    N_{FB} = \frac{s}{R_1 C_1}, \qquad
-    D = s^2 + s\left(\frac{1}{R_1 C_1} + \frac{1}{R_2 C_1} + \frac{1}{R_2 C_2}\right) + \frac{1}{R_1 R_2 C_1 C_2}
 \end{equation}
 \begin{equation}
     T_{PA}(s) = \frac{k \, s^2}{s^2 + s\left(\dfrac{1}{R_2 C_1} + \dfrac{1}{R_2 C_2} + \dfrac{1 - k}{R_1 C_1}\right) + \dfrac{1}{R_1 R_2 C_1 C_2}}
     \label{eq:sk_pa}
 \end{equation}
-Nótese que en el pasaaltos el término afectado por $k$ es el que contiene a $R_1$ (la resistencia de realimentación), y no a $R_2$ como en el pasabajos.
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}{0.49\textwidth}
         \centering
-        \begin{circuitikz}[scale=0.7, transform shape]
+        \begin{circuitikz}[scale=0.62, transform shape]
             \draw (5.6,0) node[op amp, noinv input up, anchor=+] (U) {};
             \draw (0,0) node[left]{$V_{in}$} to[R, l=$R_1$, o-*] (2,0) coordinate (X) to[R, l=$R_2$, -*] (4,0) -- (U.+);
             \draw (4,0) to[C, l_=$C_2$] (4,-2) node[ground]{};
@@ -122,7 +61,7 @@ Nótese que en el pasaaltos el término afectado por $k$ es el que contiene a $R
     \hfill
     \begin{subfigure}{0.49\textwidth}
         \centering
-        \begin{circuitikz}[scale=0.7, transform shape]
+        \begin{circuitikz}[scale=0.62, transform shape]
             \draw (5.6,0) node[op amp, noinv input up, anchor=+] (U) {};
             \draw (0,0) node[left]{$V_{in}$} to[C, l=$C_1$, o-*] (2,0) coordinate (X) to[C, l=$C_2$, -*] (4,0) -- (U.+);
             \draw (4,0) to[R, l_=$R_2$] (4,-2) node[ground]{};
@@ -139,30 +78,20 @@ Nótese que en el pasaaltos el término afectado por $k$ es el que contiene a $R
     \label{fig:sk}
 \end{figure}
 
-\subsubsection{Diseño de componentes iguales}
-Con $R_1 = R_2 = R$ y $C_1 = C_2 = C$, ambas celdas quedan determinadas por
+Con componentes iguales ($R_1 = R_2 = R$, $C_1 = C_2 = C$), ambas celdas quedan determinadas por
 \begin{equation}
     \omega_p = \frac{1}{RC}, \qquad \frac{\omega_p}{Q_p} = \frac{3 - k}{RC} \qquad \Rightarrow \qquad k = 3 - \frac{1}{Q_p}
     \label{eq:ci}
 \end{equation}
-de modo que $RC$ fija la frecuencia del polo y la ganancia $k$ fija el factor de calidad. La ganancia de la celda es $k$ en continua (pasabajos) o en alta frecuencia (pasaaltos). Si $k \geq 3$ el coeficiente de $s$ se anula o cambia de signo y los polos pasan al semiplano derecho: la celda se convierte en un oscilador.
+Si $k \geq 3$, el coeficiente de $s$ se anula o se vuelve negativo y la celda oscila.
 
-\subsection{Sensibilidad}
+\subsection{Sensibilidad y Tolerancias}
 \label{sec_2.4}
-La sensibilidad relativa de un parámetro $y$ respecto de un elemento $x$ se define como \cite[sec.~5.1]{daryanani}
-\begin{equation}
-    S_x^y = \frac{x}{y} \, \frac{\partial y}{\partial x} = \frac{\partial \ln y}{\partial \ln x} \approx \frac{\Delta y / y}{\Delta x / x}
-    \label{eq:sens}
-\end{equation}
-y cumple $S_x^{y_1 y_2} = S_x^{y_1} + S_x^{y_2}$, $S_x^{1/y} = -S_x^y$ y $S_x^{y^m} = m \, S_x^y$. En particular, $S_x^{Q_p} = S_x^{\omega_p} - S_x^{\omega_p/Q_p}$.
-
-\subsection{Peor Caso y Montecarlo}
-\label{sec_2.5}
-A primer orden, la desviación relativa de $y$ ante variaciones simultáneas de todos los componentes es \cite[sec.~5.2, ec.~5.19]{daryanani}
+La sensibilidad de un parámetro $y$ respecto de un elemento $x$ es $S_x^y = (x/y)(\partial y/\partial x)$ \cite[sec.~5.1]{daryanani}. Ante variaciones simultáneas de todos los componentes, a primer orden \cite[sec.~5.2, ec.~5.19]{daryanani}:
 \begin{equation}
     \frac{\Delta y}{y} \approx \sum_i S_{x_i}^{y} \, \frac{\Delta x_i}{x_i}
     \qquad \Rightarrow \qquad
     \left|\frac{\Delta y}{y}\right|_{max} \approx \delta \sum_i \left|S_{x_i}^{y}\right|
     \label{eq:peor}
 \end{equation}
-donde $\delta$ es la tolerancia. El peor caso se alcanza cuando cada componente se desplaza al extremo de su tolerancia que suma su contribución con el mismo signo que las demás: para el máximo aumento de $y$, cada componente se mueve en el sentido del signo de su sensibilidad, y para la máxima disminución, en el sentido opuesto. Esta cota es conservadora, porque la probabilidad de que todos los componentes coincidan en el extremo desfavorable es muy baja. El análisis de Montecarlo la complementa: asigna a cada componente un valor aleatorio dentro de su tolerancia, repite la simulación muchas veces y permite estimar la dispersión de la respuesta y el porcentaje de circuitos que cumplen la especificación.
+donde $\delta$ es la tolerancia. El peor caso se da cuando cada componente se desplaza en el sentido que suma su contribución a las demás, según el signo de su sensibilidad. El análisis de Montecarlo lo complementa: sortea valores dentro de la tolerancia, repite la simulación muchas veces y estima qué proporción de los circuitos cumple la especificación.
