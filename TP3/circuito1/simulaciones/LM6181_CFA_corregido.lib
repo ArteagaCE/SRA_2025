@@ -1,0 +1,38 @@
+* =========================================================
+* LM6181 - Modelo CFA (linealizado) con los parametros de la catedra
+*   Rt = 2.37 Meg, Ct = 4.8 pF   -> polo 1 = 14 kHz
+*   R2 = 1 k, C2 = 1.933 pF      -> polo 2 = 82.3 MHz
+* Pines: 1=IN+ (no inversora), 2=IN- (inversora), 3=V+, 4=V-, 5=OUT
+* ri = resistencia de entrada inversora (salida del buffer). La hoja de
+*      datos no la publica; el apunte usa 20 ohm (Cap. III) / 30 ohm (3.10).
+* Modelo lineal: NO incluye slew-rate, saturacion ni impedancia de salida.
+* =========================================================
+.SUBCKT LM6181 1 2 3 4 5 PARAMS: ri=20
+
+* Buffer de entrada: la tension de IN+ aparece en el nodo nb (Zin+ alta)
+Ebuf nb 0 1 0 1
+* Terminal inversora: baja impedancia ri; Vsense mide la corriente Iin
+Vsense nb nm 0
+RIN nm 2 {ri}
+
+* Espejo de corriente: Iin se inyecta en el nodo de transimpedancia nzt
+Fz 0 nzt Vsense 1
+
+* Transimpedancia: Zt = Rt/(1+s Rt Ct)  (Rt y Ct EN PARALELO a tierra)
+RT nzt 0 2.37Meg
+C1 nzt 0 4.8p
+
+* Segundo polo (82.3 MHz)
+R2 nzt nz2 1k
+C2 nz2 0 1.933p
+
+* Buffer de salida ideal
+Eout 5 0 nz2 0 1
+
+* Referencias para evitar nodos flotantes
+R_FLOAT1 1 0 100G
+R_FLOAT2 5 0 100G
+RV+ 3 0 1G
+RV- 4 0 1G
+
+.ENDS LM6181

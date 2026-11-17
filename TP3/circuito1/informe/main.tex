@@ -1,0 +1,54 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{indentfirst} % Fuerz la sangría en el primer párrafo de cada sección
+\usepackage{hyperref} % Esto además hará que los links sean clickeables
+\usepackage[T1]{fontenc}
+
+% --- Paquetes de Diseño y Estética ---
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+\usepackage{fancyhdr} % Encabezados y pies de página
+\usepackage{titlesec} % Formato de títulos
+
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+% --- Paquetes de Gráficos ---
+\usepackage{caption}
+\usepackage{subcaption}
+
+
+
+\usepackage{amssymb}
+\usepackage{siunitx}        % unidades SI  \SI{220}{\volt}
+\usepackage{pgfplots}       % gráficas (opcional)
+\pgfplotsset{compat=1.18}
+
+
+\begin{document}
+\include{0_portada}
+\tableofcontents
+\newpage % Salto de página para que el texto empiece en la hoja siguiente
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+\input{1_intro}
+\newpage
+\input{2_marco_teorico}
+\newpage
+\input{3_desarrollo}
+\input{3b_desarrollo_caso2.tex}
+\input{3c_desarrollo_caso3.tex}
+\newpage
+\input{4_conclusiones}
+\input{bibliografia}
+\end{document}

@@ -1,0 +1,14 @@
+﻿Magnitud,Valor,Unidad
+Ganancia de lazo en continua T0,"22,361  (87.0 dB)",
+Ancho de banda potencial fG = fT/√Avf,316.2,kHz
+Cruce de T compensada (asintótico) K·Avf2·fT,223.6,kHz
+Frecuencia de los polos fp,316.2,kHz
+Factor de calidad Qp,0.707,
+Amortiguamiento ζ,0.707,
+Polo de lazo cerrado (parte real),-223.6,kHz
+Polo de lazo cerrado (parte imaginaria),±223.6,kHz
+Ancho de banda real fH (-3 dB),316.2,kHz
+Frecuencia de cruce exacta fGc (2 polos),203.5,kHz
+ΩG = fGc/fp,0.6436,
+Margen de fase (2 polos),65.53,°
+Margen de fase con fórmula del apunte (6.17),65.53,°

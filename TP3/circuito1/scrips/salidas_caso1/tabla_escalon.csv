@@ -1,0 +1,6 @@
+﻿Magnitud,Modelo 2 polos,Modelo 4 polos,LTSpice (medido)
+Vpico [V],1.043,1.058,1.058
+Vestacionario [V],1.000,1.000,1.000
+Sobrepico %OS,4.32,5.82,5.83
+Amortiguamiento ζ,0.7071,0.6711,0.6709
+Margen de fase estimado [°],65.53,63.57,63.56

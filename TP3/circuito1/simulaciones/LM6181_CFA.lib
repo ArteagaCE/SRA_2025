@@ -1,0 +1,31 @@
+* =========================================================
+* LM6181 - Modelo CFA corregido (fp2 = 82.3 MHz)
+* Pines: 1=IN+, 2=IN-, 3=V+, 4=V-, 5=OUT
+* =========================================================
+.SUBCKT LM6181 1 2 3 4 5
+
+* Resistencia de entrada inversora (baja impedancia)
+RIN 2 nint 1m
+
+* Transconductancia: Error de corriente -> Nodo de ganancia
+Gm nzt 0 1 2 1
+
+* Transimpedancia ZT con 2 polos
+* Polo 1: 14 kHz (2.37Meg y 4.8p)
+RT nzt nz1 2.37Meg
+C1 nz1 0 4.8p
+
+* Polo 2: 82.3 MHz (1k y 1.933p)
+R2 nz1 nz2 1k
+C2 nz2 0 1.933p
+
+* Buffer de salida ideal
+Eout 5 0 nz2 0 1
+
+* Referencias para evitar nodos flotantes (Matrix singular)
+R_FLOAT1 1 0 100G
+R_FLOAT2 5 0 100G
+RV+ 3 0 1G
+RV- 4 0 1G
+
+.ENDS LM6181
