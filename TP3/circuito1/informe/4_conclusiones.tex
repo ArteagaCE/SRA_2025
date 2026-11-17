@@ -1,0 +1,32 @@
+\section{Conclusiones}
+\label{sec:conclusiones}
+
+En este trabajo se diseñaron, calcularon y simularon tres amplificadores compuestos de $\SI{20}{dB}$ de ganancia con el objetivo de alcanzar una respuesta de máxima planicidad de módulo (MPM): VFA-VFA (Caso 1), VFA-CFA (Caso 2) y VFA-CFA con red de compensación cero-polo (Caso 3). La \autoref{tab:resumen_final} resume las mediciones de LTSpice de los tres casos.
+
+\begin{table}[H]
+\centering
+\caption{Resumen de resultados medidos en LTSpice de los tres casos.}
+\label{tab:resumen_final}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Magnitud} & \textbf{Caso 1} & \textbf{Caso 2} & \textbf{Caso 3} & \textbf{MPM} \\
+\midrule
+Cruce de la ganancia de lazo $f_{Gc}$ & \SI{206}{kHz} & \SI{1,87}{MHz} & \SI{1,96}{MHz} & --- \\
+Margen de fase del lazo $M_\varphi$ & \ang{62,5} & \ang{65,8} & \ang{73,6} & \ang{65,5} \\
+Ancho de banda real $f_H$ ($-3$ dB) & \SI{345}{kHz} & \SI{3,04}{MHz} & \SI{2,82}{MHz} & --- \\
+Sobrepico del escalón & $5{,}83\,\mathrm{\char37}$ & $3{,}35\,\mathrm{\char37}$ & sin sobrepico & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Caso 1: VFA-VFA.} La compensación por desplazamiento de polos, con la ganancia local del segundo amplificador $A_{vf2} = Q_p\sqrt{A_{vf}}$, cumple el diseño: ganancia de $\SI{20}{dB}$, respuesta sin pico en frecuencia y margen de fase próximo al de MPM. El ancho de banda real ($\SI{345}{kHz}$) es unas $3{,}4$ veces el del amplificador simple. El modelo de dos polos subestima el ancho de banda y sobreestima el margen de fase porque desprecia el segundo polo del LM324; el modelo de cuatro polos reproduce las mediciones con errores menores al $0{,}2\,\mathrm{\char37}$.
+
+\paragraph{Caso 2: VFA-CFA.} Reemplazar el segundo amplificador por un CFA, que mantiene su ancho de banda independiente de la ganancia, permite fijar el ancho de banda potencial en $\SI{2}{MHz}$ con una ganancia local de $20$. El ancho de banda real medido ($\SI{3,04}{MHz}$) es casi $9$ veces el del Caso 1, con un margen de fase de $\ang{65,8}$, equivalente al de MPM. El modelo del CFA con dos polos de transimpedancia y resistencia $r_i$ coincide con la simulación con errores menores al $0{,}2\,\mathrm{\char37}$ y el valor supuesto de $r_i$ modifica el margen de fase en menos de $3^\circ$.
+
+\paragraph{Caso 3: VFA-CFA con red cero-polo.} La red cancela el segundo polo del VFA y lo reemplaza por un polo al doble de frecuencia. Con la misma ganancia de lazo y el mismo $f_g$ que en el Caso 2, el margen de fase mejora de $\ang{65,8}$ a $\ang{73,6}$ y desaparece el sobrepico, a costa de reducir el ancho de banda real en $\approx7\,\mathrm{\char37}$ y de duplicar la ganancia del CFA. El margen resulta mayor que el de MPM porque se mantuvo $f_g = \SI{2}{MHz}$; si se aumenta la ganancia del CFA se recupera MPM con más ancho de banda, pero el polo del CFA limita esa mejora.
+
+\paragraph{Validez de los modelos.} En los tres casos el modelo de cuatro polos (dos del VFA y dos del CFA) coincide con la simulación, mientras que el de dos polos es una buena primera aproximación de diseño pero se desvía entre $3^\circ$ y $5^\circ$ en el margen de fase. La estimación del margen de fase a partir del sobrepico del escalón concuerda con la medición en el lazo dentro de $\approx1^\circ$, siempre que la respuesta presente sobrepico y el escalón sea de pequeña señal, con flancos mucho más rápidos que el circuito.
+
+\paragraph{Conclusión general.} Los resultados muestran que el ancho de banda de un compuesto lo limita el amplificador más lento del lazo y que la compensación permite recuperar el ancho de banda potencial. El CFA eleva el ancho de banda en casi un orden de magnitud respecto del compuesto VFA-VFA, y la red cero-polo mejora además el margen de fase sin perder la precisión en continua, que sigue fijada por el VFA. En todos los casos hay un compromiso entre ancho de banda, margen de fase y complejidad del diseño.

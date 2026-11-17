@@ -1,0 +1,9 @@
+﻿Parámetro,Símbolo,Valor,Unidad
+Ganancia global,Avf,10.0,V/V (20 dB)
+Factor de realimentación,K,0.10,-
+Ganancia del segundo amplificador,Avf2,2.2361,V/V
+Resistencia de entrada global,Ri,10.000,kΩ
+Resistencia de realimentación global,Rf,90.000,kΩ
+Resistencia de entrada local,R1,10.000,kΩ
+Resistencia de realimentación local,R2,12.361,kΩ
+Frecuencia del polo desplazado,fpx,447.2,kHz

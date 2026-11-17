@@ -1,0 +1,19 @@
+\begin{table}[H]
+\centering
+\begin{tabular}{lccccc}
+\toprule
+Magnitud & Analítico & Modelo 4 polos & LTSpice & Error anal. [%] & Error 4 polos [%] \\
+\midrule
+Ancho de banda potencial fG = fT/√Avf [kHz] & 316.2 & -- & -- & -- & -- \\
+Cruce de T compensada, K·Avf2·fT [kHz] & 223.6 & 206.1 & 206.0 & +8.6 & +0.0 \\
+Cruce de T compensada, exacto (2 polos) [kHz] & 203.5 & 206.1 & 206.0 & -1.2 & +0.0 \\
+Margen de fase del lazo [$^\circ$] & 65.53 & 62.51 & 62.52 & +4.8 & -0.0 \\
+Frecuencia de los polos fp [kHz] & 316.2 & 330.3 & -- & -- & -- \\
+Ancho de banda real fH (-3 dB) [kHz] & 316.2 & 345.8 & 345.0 & -8.3 & +0.2 \\
+Sobrepico \%OS [\%] & 4.32 & 5.82 & 5.83 & -25.8 & -0.1 \\
+Margen de fase desde el escalón [$^\circ$] & 65.53 & 63.57 & 63.56 & +3.1 & +0.0 \\
+\bottomrule
+\end{tabular}
+\caption{Comparación entre teoría y simulación (VFA-VFA).}
+\label{tab:final_c1}
+\end{table}
