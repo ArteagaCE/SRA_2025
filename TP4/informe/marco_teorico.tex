@@ -1,0 +1,97 @@
+\section{Introducción Teórica}
+\label{sec_2}
+
+\subsection{Aproximación y Transformación}
+\label{sec_2.1}
+La aproximación de Chebyshev (tipo I) propone para el pasabajos normalizado $|H(j\Omega)|^2 = 1/\left[1 + \varepsilon^2 C_n^2(\Omega)\right]$, donde $C_n$ es el polinomio de Chebyshev de orden $n$ \cite[sec.~4.3]{daryanani}. En la banda de paso la atenuación oscila entre $0$ y $A_p$ (respuesta \textit{equiripple}), lo que permite una transición más abrupta que Butterworth para el mismo orden, a costa de polos con mayor $Q_p$. El rizado y el orden mínimo para una atenuación $A_s$ en la frecuencia normalizada $\Omega_s$ son:
+\begin{equation}
+    \varepsilon = \sqrt{10^{A_p/10} - 1}
+    \label{eq:eps}
+\end{equation}
+\begin{equation}
+    n \geq \frac{\mathrm{arccosh}\sqrt{\left(10^{A_s/10} - 1\right)/\left(10^{A_p/10} - 1\right)}}{\mathrm{arccosh} \, \Omega_s}
+    \label{eq:orden}
+\end{equation}
+
+El pasabanda se obtiene con la transformación \cite[sec.~4.7.2]{daryanani}
+\begin{equation}
+    s_{LP} = \frac{s^2 + \omega_0^2}{B \, s}, \qquad \omega_0 = \sqrt{\omega_{p1} \, \omega_{p2}}, \qquad B = \omega_{p2} - \omega_{p1}
+    \label{eq:transf}
+\end{equation}
+que duplica el orden, y la frecuencia de rechazo del prototipo resulta
+\begin{equation}
+    \Omega_s = \min_{i} \frac{\left|\omega_{s,i}^2 - \omega_0^2\right|}{B \, \omega_{s,i}}
+    \label{eq:omegas}
+\end{equation}
+
+\subsection{Celdas Sallen-Key de Realimentación Positiva}
+\label{sec_2.3}
+La función de transferencia se factoriza en bicuadráticas, caracterizadas por $\omega_p$ y $Q_p$, que se implementan con celdas activas en cascada \cite[sec.~7.2]{daryanani}. En una celda de realimentación positiva, una red $RC$ recibe la entrada y la salida de un amplificador no inversor de ganancia $k = 1 + r_2/r_1$. Si $T_{FF} = N_{FF}/D$ y $T_{FB} = N_{FB}/D$ son las transferencias de la red desde la entrada y desde la salida, la transferencia de la celda es \cite[sec.~7.4.2, ec.~7.18]{daryanani}:
+\begin{equation}
+    T_V(s) = \frac{k \, N_{FF}}{D - k \, N_{FB}}
+    \label{eq:tv}
+\end{equation}
+donde el término $-k N_{FB}$ reduce el coeficiente de $s$ del denominador y eleva el $Q_p$. Para las celdas pasabajos y pasaaltos de la \autoref{fig:sk} \cite[secs.~8.2 y 8.3]{daryanani} se obtiene:
+\begin{equation}
+    T_{PB}(s) = \frac{\dfrac{k}{R_1 R_2 C_1 C_2}}{s^2 + s\left(\dfrac{1}{R_1 C_1} + \dfrac{1}{R_2 C_1} + \dfrac{1 - k}{R_2 C_2}\right) + \dfrac{1}{R_1 R_2 C_1 C_2}}
+    \label{eq:sk_pb}
+\end{equation}
+\begin{equation}
+    T_{PA}(s) = \frac{k \, s^2}{s^2 + s\left(\dfrac{1}{R_2 C_1} + \dfrac{1}{R_2 C_2} + \dfrac{1 - k}{R_1 C_1}\right) + \dfrac{1}{R_1 R_2 C_1 C_2}}
+    \label{eq:sk_pa}
+\end{equation}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \begin{circuitikz}[scale=0.62, transform shape]
+            \draw (5.6,0) node[op amp, noinv input up, anchor=+] (U) {};
+            \draw (0,0) node[left]{$V_{in}$} to[R, l=$R_1$, o-*] (2,0) coordinate (X) to[R, l=$R_2$, -*] (4,0) -- (U.+);
+            \draw (4,0) to[C, l_=$C_2$] (4,-2) node[ground]{};
+            \draw (X) -- (2,2) to[C, l=$C_1$] ($(U.out)+(0.6,2.5)$) -- ($(U.out)+(0.6,0)$);
+            \draw (U.-) -- ++(-0.3,0) -- ++(0,-1.2) coordinate (N);
+            \draw (N) to[R, l_=$r_2$, *-] (N -| U.out) -- (U.out);
+            \draw (N) to[R, l_=$r_1$] ++(0,-1.8) node[ground]{};
+            \draw (U.out) to[short, -o] ++(1.2,0) node[right]{$V_o$};
+        \end{circuitikz}
+        \caption{Pasabajos.}
+        \label{fig:sk_pb}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \begin{circuitikz}[scale=0.62, transform shape]
+            \draw (5.6,0) node[op amp, noinv input up, anchor=+] (U) {};
+            \draw (0,0) node[left]{$V_{in}$} to[C, l=$C_1$, o-*] (2,0) coordinate (X) to[C, l=$C_2$, -*] (4,0) -- (U.+);
+            \draw (4,0) to[R, l_=$R_2$] (4,-2) node[ground]{};
+            \draw (X) -- (2,2) to[R, l=$R_1$] ($(U.out)+(0.6,2.5)$) -- ($(U.out)+(0.6,0)$);
+            \draw (U.-) -- ++(-0.3,0) -- ++(0,-1.2) coordinate (N);
+            \draw (N) to[R, l_=$r_2$, *-] (N -| U.out) -- (U.out);
+            \draw (N) to[R, l_=$r_1$] ++(0,-1.8) node[ground]{};
+            \draw (U.out) to[short, -o] ++(1.2,0) node[right]{$V_o$};
+        \end{circuitikz}
+        \caption{Pasaaltos.}
+        \label{fig:sk_pa}
+    \end{subfigure}
+    \caption{Celdas Sallen-Key de realimentación positiva con ganancia $k = 1 + r_2/r_1$.}
+    \label{fig:sk}
+\end{figure}
+
+Con componentes iguales ($R_1 = R_2 = R$, $C_1 = C_2 = C$), ambas celdas quedan determinadas por
+\begin{equation}
+    \omega_p = \frac{1}{RC}, \qquad \frac{\omega_p}{Q_p} = \frac{3 - k}{RC} \qquad \Rightarrow \qquad k = 3 - \frac{1}{Q_p}
+    \label{eq:ci}
+\end{equation}
+Si $k \geq 3$, el coeficiente de $s$ se anula o se vuelve negativo y la celda oscila.
+
+\subsection{Sensibilidad y Tolerancias}
+\label{sec_2.4}
+La sensibilidad de un parámetro $y$ respecto de un elemento $x$ es $S_x^y = (x/y)(\partial y/\partial x)$ \cite[sec.~5.1]{daryanani}. Ante variaciones simultáneas de todos los componentes, a primer orden \cite[sec.~5.2, ec.~5.19]{daryanani}:
+\begin{equation}
+    \frac{\Delta y}{y} \approx \sum_i S_{x_i}^{y} \, \frac{\Delta x_i}{x_i}
+    \qquad \Rightarrow \qquad
+    \left|\frac{\Delta y}{y}\right|_{max} \approx \delta \sum_i \left|S_{x_i}^{y}\right|
+    \label{eq:peor}
+\end{equation}
+donde $\delta$ es la tolerancia. El peor caso se da cuando cada componente se desplaza en el sentido que suma su contribución a las demás, según el signo de su sensibilidad. El análisis de Montecarlo lo complementa: sortea valores dentro de la tolerancia, repite la simulación muchas veces y estima qué proporción de los circuitos cumple la especificación.

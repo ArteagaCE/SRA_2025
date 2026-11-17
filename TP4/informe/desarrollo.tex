@@ -1,0 +1,347 @@
+\section{Desarrollo}
+\label{sec_3}
+
+\subsection{Aproximación de la Función de Atenuación}
+\label{sec_3.1}
+La función de transferencia se obtuvo con el script de MATLAB del Anexo~\ref{anexo_matlab}, basado en el propuesto por la Cátedra, que utiliza las funciones \texttt{cheb1ord} y \texttt{cheby1} de la \textit{Signal Processing Toolbox}. A modo de verificación, los pasos intermedios se calculan a continuación en forma analítica.
+
+El parámetro de rizado resulta (\autoref{eq:eps})
+\begin{equation}
+    \varepsilon = \sqrt{10^{0.25/10} - 1} = 0.2434
+\end{equation}
+
+La plantilla es geométricamente simétrica: $f_{s1} f_{s2} = f_{p1} f_{p2} = 10^6 \, [Hz^2]$, con frecuencia central $f_0 = 1000 \, [Hz]$ y ancho de banda $B = 2\pi \cdot 450 = 2827.43 \, [rad/s]$. Por eso ambos bordes de rechazo conducen a la misma frecuencia normalizada (\autoref{eq:omegas}):
+\begin{equation}
+    \Omega_s = \frac{5000^2 - 1000^2}{5000 \cdot 450} = \frac{1000^2 - 200^2}{200 \cdot 450} = 10.67
+\end{equation}
+y el orden mínimo (\autoref{eq:orden}) es
+\begin{equation}
+    n \geq \frac{\mathrm{arccosh}\sqrt{\dfrac{10^{3} - 1}{10^{0.025} - 1}}}{\mathrm{arccosh} \, 10.67} = \frac{5.560}{3.059} = 1.82 \quad \Rightarrow \quad n = 2
+\end{equation}
+
+El prototipo pasabajos de orden $2$ es
+\begin{equation}
+    H_{LP}(s) = \frac{2.0541}{s^2 + 1.7967 \, s + 2.1140}
+\end{equation}
+cuya ganancia en continua, $0.9717$ ($-0.25 \, [dB]$), es la propia de un Chebyshev de orden par. Aplicando la \autoref{eq:transf} se obtiene el pasabanda de orden $4$:
+\begin{equation}
+    T(s) = \frac{1.64209 \times 10^{7} \, s^2}{s^4 + 5080 \, s^3 + 9.58572 \times 10^{7} \, s^2 + 2.00550 \times 10^{11} \, s + 1.55855 \times 10^{15}}
+    \label{eq:T}
+\end{equation}
+que coincide con la función de transferencia indicada en la plantilla de la Cátedra. La atenuación en $200 \, [Hz]$ y en $5 \, [kHz]$ es de $34.83 \, [dB]$, de modo que el orden $2$ cumple con $4.83 \, [dB]$ de margen en las bandas de rechazo (\autoref{fig:aprox}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{aproximacion_chebyshev.png}
+    \caption{Aproximación de Chebyshev y plantilla de requerimientos (zonas sombreadas: prohibidas).}
+    \label{fig:aprox}
+\end{figure}
+
+La función \texttt{tf2sos} descompone la \autoref{eq:T} en dos bicuadráticas. Siguiendo el anexo de la guía, la primera se implementa como pasabajos y la segunda como pasaaltos, repartiendo la ganancia como $2g$ y $1/2$:
+\begin{equation}
+    T_{PB}(s) = \frac{3.28418 \times 10^{7}}{s^2 + 3184.43 \, s + 6.63208 \times 10^{7}},
+    \qquad
+    T_{PA}(s) = \frac{0.5 \, s^2}{s^2 + 1895.58 \, s + 2.35001 \times 10^{7}}
+    \label{eq:bicuad}
+\end{equation}
+
+\begin{table}[H]
+    \centering
+    \caption{Parámetros de las bicuadráticas.}
+    \label{tab:bicuad}
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \textbf{Sección} & $\boldsymbol{\omega_p \, [rad/s]}$ & $\boldsymbol{f_p \, [Hz]}$ & $\boldsymbol{Q_p}$ & \textbf{Ganancia} \\
+        \hline
+        Pasabajos  & $8143.76$ & $1296.12$ & $2.557$ & $H_{PB} = 0.4952$ (en continua) \\
+        Pasaaltos  & $4847.69$ & $771.53$  & $2.557$ & $H_{PA} = 0.5$ (en alta frecuencia) \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Ambas secciones tienen el mismo $Q_p$, consecuencia de la simetría de la transformación pasabanda.
+
+\subsection{Síntesis de las Bicuadráticas}
+\label{sec_3.2}
+Se emplea la celda Sallen-Key de componentes iguales de la \autoref{sec_2.3}. De la \autoref{eq:ci}, la ganancia necesaria es la misma en ambas etapas:
+\begin{equation}
+    k = 3 - \frac{1}{Q_p} = 3 - \frac{1}{2.557} = 2.609 \qquad \Rightarrow \qquad \frac{r_2}{r_1} = k - 1 = 1.609
+\end{equation}
+Se eligió $r_1 = 6.65 \, [k\Omega]$ y $r_2 = 10.7 \, [k\Omega]$ (serie E96), con lo que $k = 2.60902$, a $0.002 \, [\%]$ del valor teórico. Como se verá en la \autoref{sec_3.4}, esta precisión no es un detalle: el factor de calidad es muy sensible a $k$.
+
+\subsubsection{Etapa pasabajos}
+Con $C = 8.2 \, [nF]$ (serie E12):
+\begin{equation}
+    R = \frac{1}{\omega_p C} = \frac{1}{8143.76 \cdot 8.2 \, [nF]} = 14.97 \, [k\Omega] \quad \rightarrow \quad R_2 = 15 \, [k\Omega]
+\end{equation}
+
+La celda tiene ganancia $k = 2.609$ en continua, pero la \autoref{eq:bicuad} requiere $H_{PB} = 0.4952$. La diferencia se compensa con la técnica de atenuación de entrada \cite[sec.~7.6, ecs.~7.40--7.41]{daryanani}: $R_1$ se reemplaza por un divisor resistivo $R_a$--$R_b$, cuyo equivalente de Thévenin es una fuente $\alpha V_{in}$ con resistencia serie $R_a \parallel R_b$, que debe igualar a la $R_1$ original:
+\begin{equation}
+    \alpha_{PB} = \frac{H_{PB}}{k} = \frac{0.4952}{2.609} = 0.1898,
+    \qquad
+    R_a = \frac{R}{\alpha_{PB}} = 79.0 \, [k\Omega] \rightarrow 76.8 \, [k\Omega],
+    \qquad
+    R_b = \frac{R}{1 - \alpha_{PB}} = 18.5 \, [k\Omega] \rightarrow 18.7 \, [k\Omega]
+\end{equation}
+Con estos valores, $R_a \parallel R_b = 15.04 \, [k\Omega]$ y $\alpha = 0.1958$.
+
+\subsubsection{Etapa pasaaltos}
+Con $C = 18 \, [nF]$:
+\begin{equation}
+    R = \frac{1}{\omega_p C} = \frac{1}{4847.69 \cdot 18 \, [nF]} = 11.46 \, [k\Omega] \quad \rightarrow \quad R_3 = R_4 = 11.5 \, [k\Omega]
+\end{equation}
+Esta etapa necesita una atenuación $\alpha_{PA} = H_{PA}/k = 0.5/2.609 = 0.1916$. En el pasaaltos el elemento de entrada es un capacitor, de modo que la resistencia de Thévenin de un divisor quedaría en serie con él y modificaría la transferencia. Por eso el divisor $R_c$--$R_d$ se coloca antes de un seguidor de tensión ($U_2$), que entrega la señal atenuada con impedancia de salida nula:
+\begin{equation}
+    \alpha_{PA} = \frac{R_d}{R_c + R_d} = \frac{10 \, [k\Omega]}{42.2 \, [k\Omega] + 10 \, [k\Omega]} = 0.1916
+\end{equation}
+
+\subsubsection{Elección de valores normalizados}
+Con la aproximación de Chebyshev, el rizado nominal coincide exactamente con el límite $A_p$, y cualquier error en la ubicación de los polos lo aumenta. Por eso los capacitores (serie E12) y las resistencias (serie E96) no se eligieron por redondeo individual: el script \texttt{diseno\_tp4.py} evalúa las combinaciones de valores normalizados cercanos a los teóricos y conserva la que minimiza el rizado total del filtro. La \autoref{tab:comp} resume el resultado.
+
+\begin{table}[H]
+    \centering
+    \caption{Parámetros de cada etapa con los componentes elegidos.}
+    \label{tab:comp}
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \textbf{Etapa} & $\boldsymbol{f_p}$ \textbf{teórica} & $\boldsymbol{f_p}$ \textbf{obtenida} & $\boldsymbol{Q_p}$ \textbf{teórico} & $\boldsymbol{Q_p}$ \textbf{obtenido} \\
+        \hline
+        Pasabajos & $1296.12 \, [Hz]$ & $1292.29 \, [Hz]$ ($-0.30 \, [\%]$) & $2.557$ & $2.571$ ($+0.54 \, [\%]$) \\
+        Pasaaltos & $771.53 \, [Hz]$  & $768.86 \, [Hz]$ ($-0.35 \, [\%]$)  & $2.557$ & $2.558$ ($+0.01 \, [\%]$) \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Aun con la mejor combinación, el rizado calculado con amplificadores ideales es de $0.272 \, [dB]$: con valores comerciales no es posible ubicar los polos con la precisión que exige un rizado de $0.25 \, [dB]$. Las consecuencias se analizan en las secciones siguientes.
+
+\subsubsection{Circuito final}
+El filtro completo (\autoref{fig:circuito}) utiliza tres amplificadores operacionales, que caben en un único encapsulado LM324 \cite{lm324} alimentado con $\pm 12 \, [V]$.
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{circuitikz}
+        % Etapa 1: pasabajos
+        \draw (8.8,0) node[op amp, noinv input up, anchor=+] (U1) {$U_1$};
+        \draw (0,0) node[left]{$V_{in}$} to[R, l=$R_a$, a=$76.8\,k\Omega$, o-*] (2.6,0) coordinate (A)
+              to[R, l=$R_2$, a=$15\,k\Omega$, -*] (5.4,0) -- (U1.+);
+        \draw (A) to[R, l_={$R_b = 18.7\,k\Omega$}] (2.6,-2.4) node[ground]{};
+        \draw (5.4,0) to[C, l^={$C_2 = 8.2\,nF$}] (5.4,-2.4) node[ground]{};
+        \draw (A) -- (2.6,2.4) to[C, l=$C_1$, a=$8.2\,nF$] ($(U1.out)+(0.8,2.9)$) -- ($(U1.out)+(0.8,0)$);
+        \draw (U1.-) -- ++(-0.4,0) -- ++(0,-1.4) coordinate (N1);
+        \draw (N1) to[R, l_=$r_2$, a^=$10.7\,k\Omega$, *-] (N1 -| U1.out) -- (U1.out);
+        \draw (N1) to[R, l_={$r_1 = 6.65\,k\Omega$}] ++(0,-2.2) node[ground]{};
+        \draw (U1.out) to[short, -*] ($(U1.out)+(0.8,0)$) coordinate (PB);
+        % Divisor + seguidor
+        \draw (PB) to[R, l=$R_c$, a=$42.2\,k\Omega$, -*] ++(2.8,0) coordinate (X);
+        \draw (X) to[R, l_={$R_d = 10\,k\Omega$}] ++(0,-2.4) node[ground]{};
+        \draw (X) ++(1.4,0) node[op amp, noinv input up, anchor=+] (U2) {$U_2$};
+        \draw (X) -- (U2.+);
+        \draw (U2.-) -- ++(-0.3,0) |- ($(U2.out)+(0,-1.2)$) -- (U2.out);
+        \draw (U2.out) to[short, -*] ++(0.6,0) coordinate (PAIN);
+        % Etapa 2: pasaaltos
+        \draw (PAIN) to[C, l=$C_3$, a=$18\,nF$] ++(2.6,0) coordinate (B)
+              to[C, l=$C_4$, a=$18\,nF$, *-*] ++(2.6,0) coordinate (B2);
+        \draw (B2) ++(2.4,0) node[op amp, noinv input up, anchor=+] (U3) {$U_3$};
+        \draw (B2) -- (U3.+);
+        \draw (B2) to[R, l^={$R_4 = 11.5\,k\Omega$}] ++(0,-2.4) node[ground]{};
+        \draw (B) -- ++(0,2.4) to[R, l=$R_3$, a=$11.5\,k\Omega$] ($(U3.out)+(0.8,2.9)$) -- ($(U3.out)+(0.8,0)$);
+        \draw (U3.-) -- ++(-0.4,0) -- ++(0,-1.4) coordinate (N3);
+        \draw (N3) to[R, l_=$r_4$, a^=$10.7\,k\Omega$, *-] (N3 -| U3.out) -- (U3.out);
+        \draw (N3) to[R, l_={$r_3 = 6.65\,k\Omega$}] ++(0,-2.2) node[ground]{};
+        \draw (U3.out) to[short, -*] ($(U3.out)+(0.8,0)$) to[short, -o] ++(0.8,0) node[right]{$V_{out}$};
+        \node at ($(U1.out)+(-3,-5.8)$) {Etapa 1: pasabajos ($f_p = 1296\,Hz$, $k = 2.609$)};
+        \node at ($(U2.out)+(-1.5,-5.8)$) {Ajuste de ganancia};
+        \node at ($(U3.out)+(-3.5,-5.8)$) {Etapa 2: pasaaltos ($f_p = 771.5\,Hz$, $k = 2.609$)};
+    \end{circuitikz}}
+    \caption{Circuito del filtro pasabanda: Sallen-Key pasabajos, divisor con seguidor y Sallen-Key pasaaltos.}
+    \label{fig:circuito}
+\end{figure}
+
+\subsection{Simulación}
+\label{sec_3.3}
+El circuito se dibujó en LTspice \cite{ltspice} con amplificadores operacionales ideales ($A_{OL} = 10^5$, $GBW = 10 \, [MHz]$), y todas las simulaciones de este informe se ejecutaron a partir de ese esquemático mediante el script de Python descripto en la \autoref{sec_4.1}. Las \autoref{fig:etapa_pb} y \autoref{fig:etapa_pa} muestran la respuesta de cada etapa.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{sim_ci_etapa_pb.png}
+    \caption{Respuesta en frecuencia de la etapa pasabajos, incluido el divisor de entrada ($V_{pb}/V_{in}$).}
+    \label{fig:etapa_pb}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{sim_ci_etapa_pa.png}
+    \caption{Respuesta en frecuencia de la etapa pasaaltos ($V_{out}/V_{pa,in}$).}
+    \label{fig:etapa_pa}
+\end{figure}
+
+La etapa pasabajos tiene una ganancia en continua de $\alpha k = 0.511$ ($-5.8 \, [dB]$) y un sobrepico de $+2.5 \, [dB]$ en $1242 \, [Hz]$. La pasaaltos tiene ganancia $k = 2.609$ ($+8.3 \, [dB]$) en alta frecuencia y un sobrepico de $+16.7 \, [dB]$ en $802 \, [Hz]$, que el divisor previo ($-14.4 \, [dB]$) compensa. Combinadas, la caída de cada etapa compensa el sobrepico de la otra y se obtiene la respuesta de la \autoref{fig:sim_total}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{sim_ci_total.png}
+    \caption{Respuesta en frecuencia del filtro completo (módulo y fase) comparada con la función teórica.}
+    \label{fig:sim_total}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{sim_ci_atenuacion.png}
+        \caption{Atenuación.}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{sim_ci_banda_paso.png}
+        \caption{Detalle de la banda de paso.}
+    \end{subfigure}
+    \caption{Cumplimiento de la plantilla en la simulación nominal.}
+    \label{fig:sim_plantilla}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Resultados nominales.}
+    \label{tab:nominal}
+    \begin{tabular}{|l|c|c|c|}
+        \hline
+        & \textbf{Rizado} & \textbf{Atenuación en 200 Hz} & \textbf{Atenuación en 5 kHz} \\
+        \hline
+        Especificación & $\leq 0.25 \, [dB]$ & $\geq 30 \, [dB]$ & $\geq 30 \, [dB]$ \\
+        Aproximación teórica & $0.25 \, [dB]$ & $34.83 \, [dB]$ & $34.83 \, [dB]$ \\
+        Valores normalizados (cálculo) & $0.272 \, [dB]$ & $34.50 \, [dB]$ & $34.62 \, [dB]$ \\
+        Simulación (AO ideal) & $0.273 \, [dB]$ & $34.50 \, [dB]$ & $34.63 \, [dB]$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La simulación coincide con el cálculo. Las bandas de rechazo cumplen con más de $4.5 \, [dB]$ de margen, mientras que el rizado excede el límite en $0.023 \, [dB]$ por la cuantización de los valores normalizados. La ganancia de la banda de paso queda entre $+0.03$ y $+0.30 \, [dB]$ porque la atenuación real del divisor de entrada ($0.1958$) es un $3 \, [\%]$ mayor que la calculada; esto desplaza la curva en ganancia pero no modifica su forma.
+
+\subsection{Sensibilidades}
+\label{sec_3.4}
+Para la frecuencia del polo, ambas etapas cumplen $\omega_p = (R_1 R_2 C_1 C_2)^{-1/2}$, de modo que
+\begin{equation}
+    S_{R_1}^{\omega_p} = S_{R_2}^{\omega_p} = S_{C_1}^{\omega_p} = S_{C_2}^{\omega_p} = -\frac{1}{2}, \qquad S_k^{\omega_p} = 0
+\end{equation}
+
+Para el ancho de banda se derivan los coeficientes de $s$ de las \autoref{eq:sk_pb} y \autoref{eq:sk_pa}, como en \cite[sec.~8.2, ec.~8.9]{daryanani}, donde se presentan las sensibilidades equivalentes de $Q_p$. En el pasabajos, con $\omega_p/Q_p = \frac{1}{R_1 C_1} + \frac{1}{R_2 C_1} + \frac{1-k}{R_2 C_2}$:
+\begin{gather}
+    S_{R_1}^{\omega_p/Q_p} = -\frac{Q_p}{\omega_p R_1 C_1}, \qquad
+    S_{R_2}^{\omega_p/Q_p} = -\frac{Q_p}{\omega_p}\left(\frac{1}{R_2 C_1} + \frac{1-k}{R_2 C_2}\right) \\
+    S_{C_1}^{\omega_p/Q_p} = -\frac{Q_p}{\omega_p}\left(\frac{1}{R_1 C_1} + \frac{1}{R_2 C_1}\right), \qquad
+    S_{C_2}^{\omega_p/Q_p} = -\frac{Q_p}{\omega_p} \, \frac{1-k}{R_2 C_2}, \qquad
+    S_{k}^{\omega_p/Q_p} = -\frac{Q_p}{\omega_p} \, \frac{k}{R_2 C_2}
+\end{gather}
+Con componentes iguales, $\omega_p RC = 1$ y $Q_p = 1/(3-k)$, estas expresiones se reducen a
+\begin{gather}
+    S_{R_1}^{\omega_p/Q_p} = -Q_p, \qquad
+    S_{R_2}^{\omega_p/Q_p} = (k-2) \, Q_p, \qquad
+    S_{C_1}^{\omega_p/Q_p} = -2Q_p \\
+    S_{C_2}^{\omega_p/Q_p} = (k-1) \, Q_p, \qquad
+    S_{k}^{\omega_p/Q_p} = -k \, Q_p
+\end{gather}
+En el pasaaltos se procede igual a partir de la \autoref{eq:sk_pa}; como allí el término con $k$ contiene a $R_1$ y $C_1$, los papeles de los componentes cambian. La \autoref{tab:sens} reúne los valores numéricos, que se verificaron por diferencias finitas sobre la función de transferencia.
+
+\begin{table}[H]
+    \centering
+    \caption{Sensibilidades de $\omega_p$, $\omega_p/Q_p$ y $Q_p$ ($Q_p = 2.557$, $k = 2.609$).}
+    \label{tab:sens}
+    \begin{tabular}{|c|c|c|c||c|c|c|c|}
+        \hline
+        \multicolumn{4}{|c||}{\textbf{Pasabajos}} & \multicolumn{4}{c|}{\textbf{Pasaaltos}} \\
+        \hline
+        $\boldsymbol{x}$ & $\boldsymbol{S^{\omega_p}}$ & $\boldsymbol{S^{\omega_p/Q_p}}$ & $\boldsymbol{S^{Q_p}}$ &
+        $\boldsymbol{x}$ & $\boldsymbol{S^{\omega_p}}$ & $\boldsymbol{S^{\omega_p/Q_p}}$ & $\boldsymbol{S^{Q_p}}$ \\
+        \hline
+        $R_1 = R_a \parallel R_b$ & $-0.5$ & $-2.557$ & $+2.057$ & $R_3$ (realim.) & $-0.5$ & $+4.115$ & $-4.615$ \\
+        $R_2$ & $-0.5$ & $+1.557$ & $-2.057$ & $R_4$ (a masa) & $-0.5$ & $-5.115$ & $+4.615$ \\
+        $C_1$ (realim.) & $-0.5$ & $-5.115$ & $+4.615$ & $C_3$ (entrada) & $-0.5$ & $+1.557$ & $-2.057$ \\
+        $C_2$ (a masa) & $-0.5$ & $+4.115$ & $-4.615$ & $C_4$ & $-0.5$ & $-2.557$ & $+2.057$ \\
+        $k$ & $0$ & $-6.672$ & $+6.672$ & $k$ & $0$ & $-6.672$ & $+6.672$ \\
+        \hline
+        $\sum |S|$ (sin $k$) & $2$ & $13.34$ & & $\sum |S|$ (sin $k$) & $2$ & $13.34$ & \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Las sensibilidades de $\omega_p$ son bajas, pero las del ancho de banda y del factor de calidad son elevadas: varias superan $4$ y la de $k$ llega a $6.7$. El origen está en la \autoref{eq:ci}: el ancho de banda es proporcional a $3 - k = 0.391$, una diferencia pequeña entre dos números grandes, de modo que errores de pocos por ciento en $k$ o en los componentes que acompañan al término $(1-k)$ se amplifican. Como $k = 1 + r_2/r_1$, $S_{r_2}^{k} = -S_{r_1}^{k} = (k-1)/k = 0.617$, y entonces $|S_{r_{1,2}}^{Q_p}| = 0.617 \cdot 6.672 = 4.1$.
+
+\subsection{Peor Desviación}
+\label{sec_3.5}
+Con una tolerancia $\delta = 10 \, [\%]$, la \autoref{eq:peor} y la \autoref{tab:sens} dan
+\begin{equation}
+    \left|\frac{\Delta \omega_p}{\omega_p}\right|_{max} \approx 10 \, [\%] \cdot 4 \cdot 0.5 = 20 \, [\%],
+    \qquad
+    \left|\frac{\Delta (\omega_p/Q_p)}{\omega_p/Q_p}\right|_{max} \approx 10 \, [\%] \cdot 13.34 = 133 \, [\%]
+\end{equation}
+
+La primera cota es razonable; la segunda supera el $100 \, [\%]$, lo que indica que el coeficiente de $s$ del denominador puede anularse y que la aproximación lineal deja de ser válida. Para estudiar ambos efectos se simularon dos peores casos, cada uno en sus dos sentidos:
+\begin{itemize}
+    \item \underline{Corrimiento de $\omega_p$:} todos los componentes $+10 \, [\%]$ y todos $-10 \, [\%]$. Como todas las $S^{\omega_p}$ tienen el mismo signo, este es el peor caso de la frecuencia del polo.
+    \item \underline{Ancho de banda:} cada componente se desplaza un $10 \, [\%]$ en el sentido opuesto al signo de su $S^{\omega_p/Q_p}$ ($s = +1$, ancho de banda máximo) o en el mismo sentido ($s = -1$, ancho de banda mínimo).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{sim_peor_caso_wp.png}
+    \caption{Peor caso de la frecuencia del polo: todos los componentes $\pm 10 \, [\%]$.}
+    \label{fig:peor_wp}
+\end{figure}
+
+En el primer caso (\autoref{fig:peor_wp}) la curva se desplaza sin deformarse: $Q_p$ depende solo de cocientes de componentes y de $k$, que no cambian si todos varían en la misma proporción. La frecuencia central pasa de $995 \, [Hz]$ a $1230 \, [Hz]$ ($+23.6 \, [\%]$) y a $824 \, [Hz]$ ($-17.2 \, [\%]$), en acuerdo con el cálculo exacto (un cambio relativo en los productos $RC$ desplaza la respuesta en la misma proporción sobre el eje de frecuencias \cite[sec.~13.2.1, ec.~13.9]{daryanani}), ya que $\omega_p \propto (RC)^{-1}$ y $(1 \mp 0.1)^{-2} - 1 = +23.5 \, [\%]$ y $-17.4 \, [\%]$. El rizado de la forma no cambia, pero la banda de paso del filtro se sale de $800$--$1250 \, [Hz]$ y el rizado medido en esa ventana sube a $5.7 \, [dB]$ y $5.2 \, [dB]$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{sim_peor_caso_bw.png}
+    \caption{Peor caso del ancho de banda.}
+    \label{fig:peor_bw}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Peor caso del ancho de banda ($\delta = 10 \, [\%]$).}
+    \label{tab:peor_bw}
+    \begin{tabular}{|c|c|c|c|l|}
+        \hline
+        \textbf{Caso} & $\boldsymbol{k}$ & $\boldsymbol{Q_p}$ \textbf{(PB / PA)} & \textbf{Polos del pasabajos [rad/s]} & \textbf{Resultado} \\
+        \hline
+        $s = +1$ & $2.316$ & $0.87$ / $0.87$ & $-4689 \pm j\,6729$ & Ganancia $-13.4 \, [dB]$, rechazo relativo $23.6 \, [dB]$ \\
+        Nominal  & $2.609$ & $2.57$ / $2.56$ & $-1579 \pm j\,7965$ & Cumple salvo el rizado ($0.27 \, [dB]$) \\
+        $s = -1$ & $2.967$ & $-1.70$ / $-1.71$ & $+2412 \pm j\,7839$ & \textbf{Inestable} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Con $s = +1$, $k$ cae a $2.316$ y el $Q_p$ de ambas etapas baja de $2.56$ a $0.87$: el filtro pierde la forma de Chebyshev, la ganancia cae $13.4 \, [dB]$ y el rechazo relativo queda en $23.6 \, [dB]$, por debajo de los $30 \, [dB]$ exigidos.
+
+Con $s = -1$, en cambio, $k$ sube a $2.967$ y el coeficiente de $s$ del denominador se vuelve negativo: \textbf{los polos de ambas etapas pasan al semiplano derecho y el filtro se convierte en un oscilador}. El análisis AC no puede detectarlo, porque linealiza el circuito y un polo en el semiplano derecho produce el mismo módulo que su imagen estable; por eso la curva correspondiente de la \autoref{fig:peor_bw} carece de sentido físico. La inestabilidad se verificó con un análisis transitorio de ese mismo circuito (\autoref{fig:inestable}): partiendo de una perturbación de $1 \, [mV]$, la salida crece exponencialmente y oscila a $1244 \, [Hz]$, que coincide con la parte imaginaria de los polos del pasabajos ($7839 \, [rad/s] = 1248 \, [Hz]$).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{sim_inestable.png}
+    \caption{Transitorio del peor caso $s = -1$: la salida crece sin límite (amplificador ideal).}
+    \label{fig:inestable}
+\end{figure}
+
+\subsection{Simulación de Montecarlo}
+\label{sec_3.6}
+Se realizaron $500$ simulaciones en las que cada componente pasivo toma un valor aleatorio con distribución uniforme dentro de $\pm 10 \, [\%]$. Los valores se sortean en Python y en cada corrida se calculan también los polos de ambas etapas, lo que permite identificar las corridas inestables (\autoref{sec_4.1}). El resultado se muestra en la \autoref{fig:mc10}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{sim_mc_ci_10.png}
+    \caption{Montecarlo con tolerancia del $10 \, [\%]$ (500 corridas). En rojo, las corridas inestables.}
+    \label{fig:mc10}
+\end{figure}
+
+De las $500$ corridas, $40$ ($8 \, [\%]$) resultaron inestables. Entre las estables, el rizado tiene una mediana de $4.0 \, [dB]$ y un percentil $95$ de $12.5 \, [dB]$; ninguna corrida cumple el rizado de $0.25 \, [dB]$, y el $5.4 \, [\%]$ de las estables tampoco cumple el rechazo de $30 \, [dB]$. Los resultados para tolerancias menores se presentan en la \autoref{sec_4.3}.
+
+\subsection{Condiciones de Operación Límite}
+\label{sec_3.7}
+\begin{itemize}
+    \item \underline{Tolerancias:} como se mostró, son la limitación principal. El rizado de $0.25 \, [dB]$ no se alcanza ni con los valores nominales, y con $10 \, [\%]$ de tolerancia una fracción de los circuitos oscila.
+    \item \underline{Saturación:} la salida de la etapa pasabajos tiene un sobrepico de $+2.5 \, [dB]$ (factor $1.34$). La excursión de salida del LM324 no es simétrica. La hoja de datos \cite[sec.~6.7]{lm324} garantiza un nivel alto $V_{OH} \geq V_{CC} - 1.5 \, [V]$ a $25 \, [^\circ C]$ con $R_L = 2 \, [k\Omega]$, mientras que el nivel bajo llega a menos de $20 \, [mV]$ de la alimentación negativa ($V_{OL}$, con $R_L \leq 10 \, [k\Omega]$ conectada a ella). Una simulación en continua del macromodelo con $\pm 12 \, [V]$, conectado como seguidor y con la carga a masa, dio una excursión de $+11.0$ a $+11.2 \, [V]$ en el semiciclo positivo y de $-11.8$ a $-12.0 \, [V]$ en el negativo, según la carga ($2 \, [k\Omega]$ a $1 \, [M\Omega]$). El límite lo impone el semiciclo positivo: con el valor garantizado ($+10.5 \, [V]$), la entrada no debe superar $10.5/1.34 \approx 7.8 \, [V]$ de pico ($8.2 \, [V]$ con el valor del modelo).
+    \item \underline{Velocidad de respuesta:} con $SR = 0.5 \, [V/\mu s]$ (típico \cite[sec.~6.10]{lm324}), la amplitud máxima sin distorsión por \textit{slew rate} en $1250 \, [Hz]$ es $SR/(2\pi f) = 63.7 \, [V]$, muy superior a la excursión disponible.
+    \item \underline{Alta frecuencia:} con el amplificador real, la atenuación disminuye por encima de unos $40 \, [kHz]$ (\autoref{sec_4.4}), aunque se mantiene muy por encima de los $30 \, [dB]$ exigidos.
+\end{itemize}

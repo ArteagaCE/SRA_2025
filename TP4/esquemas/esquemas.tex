@@ -1,0 +1,138 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,landscape,margin=1.2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[american]{circuitikz}
+\usetikzlibrary{calc}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+% Etiqueta de nodo (nombre que hay que poner con Label Net en LTspice)
+\newcommand{\nodo}[1]{\textcolor{red}{\textbf{\texttt{#1}}}}
+
+\begin{document}
+
+% =====================================================================
+\section*{1. Filtro principal: Sallen-Key de componentes iguales (\texttt{filtro\_ci\_ideal.asc})}
+Los nombres en \nodo{rojo} son las etiquetas de nodo de LTspice. Con AO ideal (\texttt{opamp} + \texttt{.lib opamp.sub}) no hace falta alimentación. Con LM324 cada AO lleva V+ = \texttt{VCC} (+12\,V) y V$-$ = \texttt{VEE} ($-$12\,V).
+
+\vspace{0.6cm}
+\begin{center}
+\begin{circuitikz}[scale=0.66, transform shape]
+    % ---------------- Etapa 1: pasabajos ----------------
+    \draw (8.8,0) node[op amp, noinv input up, anchor=+] (U1) {$U_1$};
+    \draw (0,0) node[left]{\nodo{in}} to[R, l=$R_a$, a=$76.8\,k\Omega$, o-*] (2.6,0) coordinate (A)
+          to[R, l=$R_2$, a=$15\,k\Omega$, -*] (5.4,0) -- (U1.+);
+    \node[above left, red] at (A) {\textbf{A}};
+    \draw (A) to[R, l_={$R_b = 18.7\,k\Omega$}] (2.6,-2.4) node[ground]{};
+    \draw (5.4,0) to[C, l^={$C_2 = 8.2\,nF$}] (5.4,-2.4) node[ground]{};
+    \draw (A) -- (2.6,2.4) to[C, l=$C_1$, a=$8.2\,nF$] ($(U1.out)+(0.8,2.9)$) -- ($(U1.out)+(0.8,0)$);
+    \draw (U1.-) -- ++(-0.4,0) -- ++(0,-1.4) coordinate (N1);
+    \draw (N1) to[R, l_=$r_2$, a^=$10.7\,k\Omega$, *-] (N1 -| U1.out) -- (U1.out);
+    \draw (N1) to[R, l_={$r_1 = 6.65\,k\Omega$}] ++(0,-2.2) node[ground]{};
+    \draw (U1.out) to[short, -*] ($(U1.out)+(0.8,0)$) coordinate (PB);
+    \node[above right] at (PB) {\nodo{pb}};
+
+    % ---------------- Divisor + seguidor ----------------
+    \draw (PB) to[R, l=$R_c$, a=$42.2\,k\Omega$, -*] ++(2.8,0) coordinate (X);
+    \node[above right, xshift=2pt] at (X) {\nodo{x}};
+    \draw (X) to[R, l_={$R_d = 10\,k\Omega$}] ++(0,-2.4) node[ground]{};
+    \draw (X) ++(1.4,0) node[op amp, noinv input up, anchor=+] (U2) {$U_2$};
+    \draw (X) -- (U2.+);
+    \draw (U2.-) -- ++(-0.3,0) |- ($(U2.out)+(0,-1.2)$) -- (U2.out);
+    \draw (U2.out) to[short, -*] ++(0.6,0) coordinate (PAIN);
+    \node[above] at (PAIN) {\nodo{pa\_in}};
+
+    % ---------------- Etapa 2: pasaaltos ----------------
+    \draw (PAIN) to[C, l=$C_1$, a=$18\,nF$] ++(2.6,0) coordinate (B)
+          to[C, l=$C_2$, a=$18\,nF$, *-*] ++(2.6,0) coordinate (B2);
+    \node[above left, red] at (B) {\textbf{B}};
+    \draw (B2) ++(2.4,0) node[op amp, noinv input up, anchor=+] (U3) {$U_3$};
+    \draw (B2) -- (U3.+);
+    \draw (B2) to[R, l_={$R_2 = 11.5\,k\Omega$}] ++(0,-2.4) node[ground]{};
+    \draw (B) -- ++(0,2.4) to[R, l=$R_1$, a=$11.5\,k\Omega$] ($(U3.out)+(0.8,2.9)$) -- ($(U3.out)+(0.8,0)$);
+    \draw (U3.-) -- ++(-0.4,0) -- ++(0,-1.4) coordinate (N3);
+    \draw (N3) to[R, l_=$r_2$, a^=$10.7\,k\Omega$, *-] (N3 -| U3.out) -- (U3.out);
+    \draw (N3) to[R, l_={$r_1 = 6.65\,k\Omega$}] ++(0,-2.2) node[ground]{};
+    \draw (U3.out) to[short, -*] ($(U3.out)+(0.8,0)$) to[short, -o] ++(0.8,0) node[right]{\nodo{out}};
+
+    % Rótulos de etapa
+    \node at ($(U1.out)+(-3,-5.8)$) {Etapa 1: pasabajos ($f_p = 1296$\,Hz, $k = 2.609$)};
+    \node at ($(U2.out)+(-1.5,-5.8)$) {Ajuste de ganancia};
+    \node at ($(U3.out)+(-3.5,-5.8)$) {Etapa 2: pasaaltos ($f_p = 771.5$\,Hz, $k = 2.609$)};
+\end{circuitikz}
+\end{center}
+
+\vspace{0.4cm}
+\begin{itemize}
+    \item \textbf{Pasabajos:} $R_a$ y $R_b$ forman el divisor que reemplaza a $R_1$. $C_1$ va del nodo A a la \textbf{salida} (realimentación positiva) y $C_2$ del + a masa.
+    \item \textbf{Pasaaltos:} $C_1$ es el capacitor de entrada. $R_1$ va del nodo B a la \textbf{salida} y $R_2$ del + a masa.
+    \item \textbf{Ganancia $k$:} en $U_1$ y $U_3$, $r_1$ va del terminal $-$ a masa y $r_2$ del $-$ a la salida, así que $k = 1 + r_2/r_1$. $U_2$ es un seguidor.
+\end{itemize}
+
+% =====================================================================
+\newpage
+\section*{2. Agregado 1: Sallen-Key de ganancia unitaria (\texttt{filtro\_ug\_ideal.asc})}
+Tiene los mismos polos y la misma ganancia total, pero cada AO es un seguidor y toda la atenuación está en el divisor de entrada.
+
+\vspace{0.8cm}
+\begin{center}
+\begin{circuitikz}[scale=0.75, transform shape]
+    \draw (8.8,0) node[op amp, noinv input up, anchor=+] (U1) {$U_1$};
+    \draw (0,0) node[left]{\nodo{in}} to[R, l=$R_a$, a=$53.6\,k\Omega$, o-*] (2.6,0) coordinate (A)
+          to[R, l=$R_2$, a=$13.3\,k\Omega$, -*] (5.4,0) -- (U1.+);
+    \node[above left, red] at (A) {\textbf{A}};
+    \draw (A) to[R, l_={$R_b = 17.8\,k\Omega$}] (2.6,-2.4) node[ground]{};
+    \draw (5.4,0) to[C, l^={$C_2 = 1.8\,nF$}] (5.4,-2.4) node[ground]{};
+    \draw (A) -- (2.6,2.4) to[C, l=$C_1$, a=$47\,nF$] ($(U1.out)+(0.8,2.9)$) -- ($(U1.out)+(0.8,0)$);
+    \draw (U1.-) -- ++(-0.3,0) |- ($(U1.out)+(0,-1.3)$) -- (U1.out);
+    \draw (U1.out) to[short, -*] ($(U1.out)+(0.8,0)$) coordinate (PB);
+    \node[above right] at (PB) {\nodo{pb}};
+
+    \draw (PB) to[C, l=$C_1$, a=$27\,nF$] ++(2.6,0) coordinate (B)
+          to[C, l=$C_2$, a=$27\,nF$, *-*] ++(2.6,0) coordinate (B2);
+    \node[above left, red] at (B) {\textbf{B}};
+    \draw (B2) ++(2.4,0) node[op amp, noinv input up, anchor=+] (U2) {$U_2$};
+    \draw (B2) -- (U2.+);
+    \draw (B2) to[R, l^={$R_2 = 39.2\,k\Omega$}] ++(0,-2.4) node[ground]{};
+    \draw (B) -- ++(0,2.4) to[R, l=$R_1$, a=$1.5\,k\Omega$] ($(U2.out)+(0.8,2.9)$) -- ($(U2.out)+(0.8,0)$);
+    \draw (U2.-) -- ++(-0.3,0) |- ($(U2.out)+(0,-1.3)$) -- (U2.out);
+    \draw (U2.out) to[short, -*] ($(U2.out)+(0.8,0)$) to[short, -o] ++(0.8,0) node[right]{\nodo{out}};
+
+    \node at ($(U1.out)+(-3,-3.6)$) {Etapa 1: pasabajos ($k = 1$)};
+    \node at ($(U2.out)+(-3.5,-3.6)$) {Etapa 2: pasaaltos ($k = 1$)};
+\end{circuitikz}
+\end{center}
+
+% =====================================================================
+\newpage
+\section*{3. Ejercicio adicional: oscilador puente de Wien (\texttt{oscilador\_wien.asc})}
+AO LM324 (\texttt{opamp2}, Value \texttt{LM324/NS}) con V+ = \texttt{VCC} (+12\,V) y V$-$ = \texttt{VEE} ($-$12\,V). Diodos 1N4148.
+
+\vspace{0.6cm}
+\begin{center}
+\begin{circuitikz}[scale=0.85, transform shape]
+    \draw (0,0) node[op amp, noinv input up] (U) {$U_1$};
+    \draw (U.+) -- ++(-1,0) coordinate (P);
+    \node[above right] at (P) {\nodo{p}};
+    \draw (P) -- ++(0,2) coordinate (T) to[R, l=$R_1$, a={$\{R\}$}] ++(2.6,0) to[C, l=$C_1$, a={$\{C\}$}] ++(2.6,0) coordinate (T2);
+    \draw (P) -- ++(-1.5,0) coordinate (P2) to[R, l_=$R_2$, a^={$\{R\}$}, *-] ++(0,-2.5) node[ground]{};
+    \draw (P2) -- ++(-3,0) to[C, l_=$C_2$, a^={$\{C\}$}] ++(0,-2.5) node[ground]{};
+    \draw (U.-) -- ++(-0.5,0) coordinate (N) -- ++(0,-1.5) coordinate (N2);
+    \draw (N2) to[R, l_=$R_g$, a^=$10\,k\Omega$, *-] ++(0,-2) node[ground]{};
+    \draw (N2) to[R, l=$R_{f1}$, a=$15\,k\Omega$] ++(2.4,0) coordinate (M) to[R, l=$R_{f2}$, a=$6.8\,k\Omega$, *-*] ++(2.4,0) coordinate (M2);
+    \draw (M) -- ++(0,-1.4) to[D, l_=$D_1$] ($(M2)+(0,-1.4)$) -- (M2);
+    \draw ($(M)+(0,-1.4)$) -- ++(0,-1.4) to[D, l_=$D_2$, invert] ($(M2)+(0,-2.8)$) -- ($(M2)+(0,-1.4)$);
+    \draw (U.out) -- (U.out -| T2) node[circ]{} to[short, -o] ++(1,0) node[right]{\nodo{out}};
+    \draw (T2) -- (M2);
+\end{circuitikz}
+\end{center}
+
+\vspace{0.3cm}
+\begin{itemize}
+    \item \textbf{Red de Wien:} $R_1$ y $C_1$ en serie desde la salida hasta el nodo \nodo{p}; $R_2$ y $C_2$ en paralelo de \nodo{p} a masa. Los valores se escriben \texttt{\{R\}} y \texttt{\{C\}} para definirlos con \texttt{.param}.
+    \item \textbf{Control de amplitud:} $R_g$ va del $-$ a masa. $R_{f1}$ y $R_{f2}$ van en serie del $-$ a la salida, con los dos diodos en antiparalelo sobre $R_{f2}$.
+    \item \textbf{Prueba de slew rate:} cambiar $R_{f1}$ a $18\,k\Omega$ y $R_{f2}$ a $4.7\,k\Omega$.
+\end{itemize}
+
+\end{document}

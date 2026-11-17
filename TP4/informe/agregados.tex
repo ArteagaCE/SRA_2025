@@ -1,0 +1,200 @@
+\section{Agregados}
+\label{sec_4}
+
+\subsection{Automatización de las Simulaciones con Python}
+\label{sec_4.1}
+Las consignas 1.5 y 1.6 requieren simular el mismo circuito muchas veces con distintos valores de componentes. Hacerlo desde la interfaz de LTspice obliga a editar a mano cada valor (por ejemplo, reemplazarlo por expresiones como \texttt{\{mc(76.8k,tol)\}}) y a mantener una copia del esquemático por cada variante, lo que es lento y propenso a errores. Como agregado, todas las simulaciones del trabajo se automatizaron con un script de Python que toma el esquemático dibujado en LTspice, genera su netlist, modifica los valores desde el propio script y ejecuta LTspice en modo \textit{batch}.
+
+\subsubsection{Herramientas}
+Se utilizó la biblioteca \texttt{spicelib} \cite{spicelib}, que permite editar netlists de SPICE, lanzar simulaciones y leer los archivos de resultados (\texttt{.raw}) y de mediciones (\texttt{.log}). Se evaluó también \texttt{PySpice}, que utiliza el simulador ngspice; se optó por \texttt{spicelib} porque trabaja directamente con LTspice, de modo que la netlist del esquemático se usa sin traducciones y los resultados son idénticos a los que se obtienen desde la interfaz gráfica, con los mismos modelos de amplificador.
+
+\subsubsection{Flujo de trabajo}
+El flujo se muestra en la \autoref{fig:flujo}. Los únicos circuitos que se dibujan son cuatro esquemáticos base: el filtro de componentes iguales con amplificadores ideales y con LM324, el filtro de ganancia unitaria (\autoref{sec_4.2}) y el oscilador (\autoref{sec_5}). Cada estudio (simulación nominal, peor caso, Montecarlo, barrido) parte de la netlist de uno de ellos.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        caja/.style={draw, rounded corners, align=center, minimum height=1.1cm, text width=2.7cm, font=\small},
+        flecha/.style={-{Stealth}, thick}]
+        \node[caja, fill=blue!8] (asc) {Esquemático\\LTspice (\texttt{.asc})};
+        \node[caja, right=0.7cm of asc] (net) {Netlist\\(\texttt{.net})};
+        \node[caja, right=0.7cm of net, fill=orange!12] (py) {Python + \texttt{spicelib}:\\cambio de valores};
+        \node[caja, right=0.7cm of py, fill=blue!8] (lt) {LTspice\\(modo \textit{batch})};
+        \node[caja, below=1.1cm of lt] (raw) {Resultados\\(\texttt{.raw}, \texttt{.log})};
+        \node[caja, left=0.7cm of raw, fill=orange!12] (an) {Python:\\polos y\\estadística};
+        \node[caja, left=0.7cm of an] (pkl) {Resultados\\(\texttt{.pkl})};
+        \node[caja, left=0.7cm of pkl, fill=green!10] (fig) {Figuras\\(\texttt{.png}, \texttt{.pkl})};
+        \draw[flecha] (asc) -- (net);
+        \draw[flecha] (net) -- (py);
+        \draw[flecha] (py) -- (lt);
+        \draw[flecha] (lt) -- (raw);
+        \draw[flecha] (raw) -- (an);
+        \draw[flecha] (an) -- (pkl);
+        \draw[flecha] (pkl) -- (fig);
+    \end{tikzpicture}
+    \caption{Flujo de trabajo de las simulaciones automatizadas.}
+    \label{fig:flujo}
+\end{figure}
+
+El código se organiza en tres scripts:
+\begin{itemize}
+    \item \texttt{simular\_tp4.py}: ejecuta los estudios y guarda los resultados en archivos \texttt{.pkl}. Puede correr todos los estudios (unos $3 \, [min]$ en total) o solo algunos.
+    \item \texttt{graficos\_tp4.py}: genera las figuras del informe a partir de los \texttt{.pkl}, sin volver a simular.
+    \item \texttt{abrir\_figura.py}: reabre cualquier figura como ventana interactiva de \textit{matplotlib}.
+\end{itemize}
+
+\subsubsection{Montecarlo en una única ejecución}
+Ejecutar LTspice una vez por corrida resultó lento: el arranque del simulador domina el tiempo de cada simulación (aproximadamente $0.5 \, [s]$), y las ejecuciones en paralelo se bloqueaban entre sí. Se resolvió generando en Python los valores de las $N$ corridas y entregándoselos a LTspice dentro de una sola simulación con \texttt{.step}: cada componente pasa a valer una tabla indexada por el número de corrida,
+\begin{center}
+    \texttt{Ra A in \{table(run, 1, }$R_{a,1}$\texttt{, 2, }$R_{a,2}$\texttt{, \ldots, 500, }$R_{a,500}$\texttt{)\}} \\
+    \texttt{.step param run 1 500 1}
+\end{center}
+De este modo, las $500$ corridas de un Montecarlo se resuelven en una única ejecución de $12$ a $30 \, [s]$. El fragmento correspondiente se reproduce en el Anexo~\ref{anexo_python}.
+
+Generar los valores en Python, en lugar de usar la función \texttt{mc()} de LTspice, tiene una ventaja adicional: el script conoce los componentes exactos de cada corrida y puede calcular con ellos los polos de ambas etapas. Así se detectan las corridas inestables, que el análisis AC no distingue (\autoref{sec_3.5}).
+
+\subsubsection{Almacenamiento de resultados y figuras}
+Los resultados de cada estudio (respuestas en frecuencia, mediciones, valores de los componentes y polos) se guardan con el módulo \texttt{pickle} de Python. Las figuras se generan a partir de esos archivos en pocos segundos, de modo que pueden ajustarse sin repetir las simulaciones. Además, cada figura se guarda como objeto de \textit{matplotlib} serializado, y \texttt{abrir\_figura.py} la reabre como ventana interactiva, con zoom, desplazamiento y edición de ejes.
+
+\subsubsection{Validación}
+Para verificar la automatización, los mismos estudios se realizaron también en forma manual desde la interfaz de LTspice. Los resultados coinciden (\autoref{tab:validacion}).
+
+\begin{table}[H]
+    \centering
+    \caption{Comparación entre simulaciones manuales en LTspice y simulaciones automatizadas.}
+    \label{tab:validacion}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Magnitud} & \textbf{LTspice (manual)} & \textbf{Script} \\
+        \hline
+        Rizado, componentes iguales (AO ideal) & $0.273 \, [dB]$ & $0.273 \, [dB]$ \\
+        Atenuación en $200 \, [Hz]$ / $5 \, [kHz]$ & $34.50$ / $34.63 \, [dB]$ & $34.50$ / $34.63 \, [dB]$ \\
+        Rizado con LM324 & $0.322 \, [dB]$ & $0.322 \, [dB]$ \\
+        Rizado, ganancia unitaria & $0.268 \, [dB]$ & $0.268 \, [dB]$ \\
+        Peor caso del ancho de banda, $s = -1$ & inestable ($k = 2.967$) & inestable ($k = 2.967$) \\
+        Oscilador con $R = 8.25 \, [k\Omega]$ & $12042.7 \, [Hz]$ & $12042.6 \, [Hz]$ \\
+        Oscilador, prueba de \textit{slew rate} & $11459 \, [Hz]$, $7.54 \, [V]$ & $11459 \, [Hz]$, $7.54 \, [V]$ \\
+        Montecarlo $10 \, [\%]$, comp. iguales: rizado medio$^{*}$ & $5.42 \, [dB]$ & $5.42 \, [dB]$ \\
+        Montecarlo $10 \, [\%]$, gan. unitaria: rizado medio$^{*}$ & $1.21 \, [dB]$ & $1.15 \, [dB]$ \\
+        \hline
+    \end{tabular}
+    \\[1mm]
+    {\footnotesize $^{*}$ Muestras aleatorias distintas (\texttt{mc()} de LTspice y generador de Python), de $500$ corridas cada una: se comparan estadísticamente.}
+\end{table}
+
+\subsection{Comparación con la Topología de Ganancia Unitaria}
+\label{sec_4.2}
+La alta sensibilidad del diseño de componentes iguales motivó comparar el mismo filtro implementado con celdas Sallen-Key de ganancia unitaria ($k = 1$). Esta alternativa corresponde al \textit{Design 1} de Daryanani \cite[sec.~8.2, ec.~8.10]{daryanani}, quien compara las sensibilidades de varios diseños de la celda pasabajos (Tabla~8.2 y Ejemplo~8.2 de la obra) y concluye que la elección $k = 1$ minimiza la desviación de ganancia debida a los componentes pasivos. En ese caso el factor de calidad se fija con un cociente de componentes en lugar de con $k$:
+\begin{equation}
+    Q_{PB} = \frac{1}{2}\sqrt{\frac{C_1}{C_2}} \quad (R_1 = R_2), \qquad Q_{PA} = \frac{1}{2}\sqrt{\frac{R_2}{R_1}} \quad (C_1 = C_2)
+\end{equation}
+lo que exige una dispersión de valores de $4 Q_p^2 = 26.2$. Con valores normalizados se eligió: pasabajos con $R_1 = R_2 = 13.3 \, [k\Omega]$, $C_1 = 47 \, [nF]$ y $C_2 = 1.8 \, [nF]$; pasaaltos con $C_1 = C_2 = 27 \, [nF]$, $R_1 = 1.5 \, [k\Omega]$ y $R_2 = 39.2 \, [k\Omega]$. Como ambas celdas tienen ganancia unitaria, toda la atenuación ($H_{PB} H_{PA} = 0.2476$) se concentra en un divisor a la entrada ($R_a = 53.6 \, [k\Omega]$, $R_b = 17.8 \, [k\Omega]$), y el circuito solo necesita dos amplificadores. Las frecuencias y factores de calidad obtenidos difieren menos de $0.4 \, [\%]$ de los teóricos, y la respuesta nominal es prácticamente igual a la del diseño principal (\autoref{fig:ug_nominal}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{sim_ug_vs_ci_nominal.png}
+    \caption{Banda de paso nominal de ambas topologías (rizado de $0.273$ y $0.268 \, [dB]$).}
+    \label{fig:ug_nominal}
+\end{figure}
+
+La diferencia está en las sensibilidades (\autoref{tab:sens_comp}). En la celda de ganancia unitaria, todas las sensibilidades del ancho de banda respecto de los componentes valen $0$, $-1/2$ o $-1$, y la suma de sus módulos es $2$ en lugar de $13.3$. La sensibilidad respecto de la ganancia es alta ($\approx 13$), pero la ganancia queda fijada por un seguidor de tensión y no depende de ningún componente. Además, con $k = 1$ el coeficiente de $s$ es una suma de términos positivos: \textbf{la celda no puede volverse inestable}, cualquiera sea la tolerancia.
+
+\begin{table}[H]
+    \centering
+    \caption{Sensibilidades del ancho de banda $\omega_p/Q_p$ en ambas topologías.}
+    \label{tab:sens_comp}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c||c|c|c|}
+        \hline
+        \multicolumn{3}{|c||}{\textbf{Pasabajos}} & \multicolumn{3}{c|}{\textbf{Pasaaltos}} \\
+        \hline
+        $\boldsymbol{x}$ & \textbf{Comp. iguales} & \textbf{Gan. unitaria} & $\boldsymbol{x}$ & \textbf{Comp. iguales} & \textbf{Gan. unitaria} \\
+        \hline
+        $R_1$ & $-2.557$ & $-0.5$ & $R_1$ (realim.) & $+4.115$ & $0$ \\
+        $R_2$ & $+1.557$ & $-0.5$ & $R_2$ (a masa) & $-5.115$ & $-1$ \\
+        $C_1$ & $-5.115$ & $-1$   & $C_1$ & $+1.557$ & $-0.5$ \\
+        $C_2$ & $+4.115$ & $0$    & $C_2$ & $-2.557$ & $-0.5$ \\
+        \hline
+        $\sum |S|$ & $13.34$ & $2$ & $\sum |S|$ & $13.34$ & $2$ \\
+        \hline
+        $k$ & $-6.672$ & fijo ($k = 1$) & $k$ & $-6.672$ & fijo ($k = 1$) \\
+        \hline
+    \end{tabular}}
+    \\[1mm]
+    {\footnotesize En componentes iguales, $k = 1 + r_2/r_1$ depende de dos resistores ($|S_{r_{1,2}}^{Q_p}| = 4.1$); en ganancia unitaria, $k$ lo fija el seguidor.}
+\end{table}
+
+Para cuantificar la diferencia se repitió el Montecarlo con la topología de ganancia unitaria, con los mismos tamaños de muestra y tolerancias (\autoref{fig:mc_ug}). La \autoref{fig:mc_comp} compara las distribuciones del rizado y de la atenuación en las bandas de rechazo para una tolerancia del $10 \, [\%]$: la mediana del rizado baja de $4.0$ a $0.89 \, [dB]$, el peor caso de $28.6$ a $4.5 \, [dB]$, no hay corridas inestables y todas cumplen el rechazo de $30 \, [dB]$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{sim_mc_ug_10.png}
+    \caption{Montecarlo de la topología de ganancia unitaria con tolerancia del $10 \, [\%]$.}
+    \label{fig:mc_ug}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{sim_mc_comparacion.png}
+    \caption{Distribución del rizado y de la atenuación mínima en las bandas de rechazo para ambas topologías (tolerancia $10 \, [\%]$, corridas estables).}
+    \label{fig:mc_comp}
+\end{figure}
+
+\subsection{Cumplimiento de la Plantilla en Función de la Tolerancia}
+\label{sec_4.3}
+La consigna pide analizar las desviaciones con componentes del $10 \, [\%]$. Como agregado, se repitió el Montecarlo con tolerancias del $5$ y del $1 \, [\%]$ para ambas topologías, a fin de determinar qué precisión de componentes haría falta para cumplir la plantilla. La \autoref{tab:mc} y la \autoref{fig:rizado_tol} resumen los resultados.
+
+\begin{table}[H]
+    \centering
+    \caption{Resultados del Montecarlo (500 corridas por caso, distribución uniforme). Los estadísticos del rizado se calculan sobre las corridas estables; las inestables se cuentan como no cumplidas.}
+    \label{tab:mc}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+        \hline
+        \textbf{Topología} & \textbf{Tolerancia} & \textbf{Inestables} & \textbf{Rizado mediano} & \textbf{Rizado P95} & \textbf{Rizado máx.} & \textbf{Rechazo $\geq 30 \, [dB]$} & \textbf{Cumplen todo} \\
+        \hline
+        \multirow{3}{*}{Comp. iguales}
+            & $10 \, [\%]$ & $40$ ($8 \, [\%]$) & $3.99 \, [dB]$ & $12.45 \, [dB]$ & $28.57 \, [dB]$ & $87.0 \, [\%]$  & $0 \, [\%]$ \\
+            & $5 \, [\%]$  & $0$ & $2.19 \, [dB]$ & $6.46 \, [dB]$  & $11.14 \, [dB]$ & $100 \, [\%]$ & $0 \, [\%]$ \\
+            & $1 \, [\%]$  & $0$ & $0.56 \, [dB]$ & $1.17 \, [dB]$  & $1.51 \, [dB]$  & $100 \, [\%]$ & $0.2 \, [\%]$ \\
+        \hline
+        \multirow{3}{*}{Gan. unitaria}
+            & $10 \, [\%]$ & $0$ & $0.89 \, [dB]$ & $2.75 \, [dB]$ & $4.52 \, [dB]$ & $100 \, [\%]$ & $0 \, [\%]$ \\
+            & $5 \, [\%]$  & $0$ & $0.59 \, [dB]$ & $1.22 \, [dB]$ & $1.73 \, [dB]$ & $100 \, [\%]$ & $0 \, [\%]$ \\
+            & $1 \, [\%]$  & $0$ & $0.31 \, [dB]$ & $0.37 \, [dB]$ & $0.51 \, [dB]$ & $100 \, [\%]$ & $0 \, [\%]$ \\
+        \hline
+    \end{tabular}}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{sim_mc_rizado_vs_tolerancia.png}
+    \caption{Rizado (mediana y percentil 95) en función de la tolerancia de los componentes.}
+    \label{fig:rizado_tol}
+\end{figure}
+
+Se extraen tres conclusiones:
+\begin{itemize}
+    \item El rechazo de $30 \, [dB]$ es la exigencia más tolerante: con $5 \, [\%]$ o menos lo cumplen todas las corridas en ambas topologías, gracias a los $4.8 \, [dB]$ de margen de la aproximación.
+    \item El rizado de $0.25 \, [dB]$ prácticamente no se cumple con ninguna tolerancia ni topología. Con la aproximación de Chebyshev el rizado nominal coincide exactamente con el límite, de modo que cualquier desvío de los polos lo excede. La única corrida que cumple (componentes iguales, $1 \, [\%]$) es una combinación casual que compensa el error de cuantización del diseño nominal.
+    \item La topología de ganancia unitaria es siempre más robusta. Con componentes del $1 \, [\%]$ su rizado no supera $0.51 \, [dB]$, y con el $10 \, [\%]$ su dispersión es del mismo orden que la del diseño de componentes iguales con el $1 \, [\%]$.
+\end{itemize}
+
+Para cumplir el rizado con componentes comerciales sería necesario diseñar con requerimientos más estrictos que los especificados, procedimiento que Daryanani denomina \textit{overdesign} \cite[sec.~13.2.1]{daryanani}: por ejemplo, un $A_p$ menor (el margen de $4.8 \, [dB]$ en las bandas de rechazo lo permite sin aumentar el orden). La alternativa es prever un ajuste individual de cada etapa en el armado.
+
+\subsection{Efecto del Amplificador Operacional Real}
+\label{sec_4.4}
+Todas las simulaciones anteriores utilizan amplificadores ideales. Las características reales del amplificador (respuesta en frecuencia, \textit{slew rate}, excursión) modifican el comportamiento del filtro \cite[cap.~12]{daryanani}. Para evaluar el efecto del componente real se repitió la simulación nominal con el macromodelo \texttt{LM324/NS} de National Semiconductor, alimentado con $\pm 12 \, [V]$, que incluye la ganancia finita, los polos internos, la impedancia de salida y los límites de excursión (\autoref{fig:lm324}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{sim_ci_ideal_vs_lm324.png}
+    \caption{Filtro con amplificador ideal y con LM324: respuesta completa (izquierda) y banda de paso (derecha).}
+    \label{fig:lm324}
+\end{figure}
+
+\begin{itemize}
+    \item \underline{Banda de paso:} el rizado aumenta de $0.273$ a $0.322 \, [dB]$. A $1.3 \, [kHz]$ la ganancia de lazo abierto del LM324 es del orden de $800$ ($GBW = 1 \, [MHz]$ en el macromodelo; la hoja de datos indica $1.2 \, [MHz]$ típico \cite[sec.~6.10]{lm324}), de modo que la ganancia de las etapas se aparta levemente de $k$. Como el factor de calidad es muy sensible a $k$ ($S_k^{Q_p} = 6.7$), ese pequeño error se traduce en un desplazamiento apreciable del rizado.
+    \item \underline{Bandas de rechazo:} la atenuación en $200 \, [Hz]$ y $5 \, [kHz]$ prácticamente no cambia ($34.49$ y $34.79 \, [dB]$).
+    \item \underline{Alta frecuencia:} con el amplificador ideal la atenuación crece indefinidamente ($87 \, [dB]$ en $100 \, [kHz]$). Con el LM324 alcanza un máximo de $68 \, [dB]$ en $42 \, [kHz]$ y luego disminuye ($62 \, [dB]$ en $100 \, [kHz]$). En la celda pasabajos, la señal llega a la salida a través de $C_1$, y a esas frecuencias la ganancia de lazo del amplificador ya no alcanza para mantener su impedancia de salida despreciable. El efecto no compromete la especificación.
+\end{itemize}

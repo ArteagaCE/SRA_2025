@@ -20,4 +20,20 @@ __pycache__/
 *.blg
 
 # Archivos de simulaciones
-simulaciones/*.raw
+
+# Salidas de LTspice
+*.raw
+*.op.raw
+*.db
+TP4/sim/*.net
+__pycache__/
+*.lof
+*.lot
+*.out
+*.bcf
+*-blx.bib
+*.run.xml
+
+# Corridas temporales de simular_tp4.py (se regeneran)
+TP4/resultados/corridas/
+TP4/figs/pkl/

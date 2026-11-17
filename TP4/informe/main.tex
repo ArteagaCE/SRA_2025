@@ -1,0 +1,168 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{graphicx}
+\usepackage[american]{circuitikz}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{csquotes}
+\usepackage{float}
+\usepackage{setspace}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta, decorations.pathreplacing, calc, positioning}
+\usepackage{listings}
+\usepackage{xcolor}
+\lstdefinestyle{codigo}{
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!45!black},
+    stringstyle=\color{red!60!black},
+    numbers=left, numberstyle=\tiny\color{gray},
+    frame=single, breaklines=true, showstringspaces=false,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {±}{{$\pm$}}1
+}
+\usepackage[style=ieee, backend=bibtex]{biblatex}
+\addbibresource{bibliografia.bib}
+\graphicspath{{Figuras/}{../figs/}}
+\onehalfspacing
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+    filecolor=blue
+}
+
+\begin{document}
+\renewcommand{\figureautorefname}{Fig.}
+\renewcommand{\tableautorefname}{Tab.}
+\renewcommand{\equationautorefname}{Ec.}
+
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+    \node[opacity=0.2,anchor=center] at (current page.center)
+        {\includegraphics[width=0.9\paperwidth]{decoracion_a.png}};
+\end{tikzpicture}
+\begin{center}
+    \includegraphics[width=15cm]{unc_fcefyn_logo.png} \\ [0.5cm]
+    \LARGE Universidad Nacional de Córdoba \\ [0.5cm]
+    \large Facultad de Ciencias Exactas, Físicas y Naturales \\
+    \vspace{40pt}
+    \large Síntesis de Redes Activas \\ [0.2cm]
+    \large Trabajo Práctico de Laboratorio N°4 \\
+    \vspace{60pt}
+    \LARGE Filtros Activos\\
+    \vspace{60pt}
+    \begin{table}[!h]
+        \centering
+        \begin{tabular}{ll}
+            \multicolumn{1}{c}{Nombre} & \multicolumn{1}{c}{DNI} \\
+            Arteaga Barrera, Cristian Eduardo & 95.159.096 \\
+            Baccino, Luca                     & 45.328.380 \\
+            Baccino, Octavio                  & 44.350.820
+        \end{tabular}
+    \end{table}
+    \vspace{20pt}
+    \begin{table}[!h]
+        \centering
+        \begin{tabular}{ll}
+            \multicolumn{1}{c}{Docentes} & Dr. Ing. Ferreyra, Pablo \\
+                                         & Ing. Reale, César \\
+        \end{tabular}
+    \end{table}
+    \vfill
+        {\small Córdoba, República Argentina\\
+                Año 2026}
+\end{center}
+\end{titlepage}
+\newpage
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+\section{Introducción}
+\label{sec_1}
+El objetivo de este trabajo es sintetizar un filtro activo que satisfaga la plantilla de requerimientos de la Cátedra \cite{guia}, reproducida en la \autoref{tab:plantilla}.
+
+\begin{table}[H]
+    \centering
+    \caption{Plantilla de requerimientos del filtro.}
+    \label{tab:plantilla}
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Requerimiento} & \textbf{Valor} \\
+        \hline
+        Banda de paso & $800$ a $1250 \, [Hz]$ \\
+        Atenuación máxima en la banda de paso ($A_p$) & $0.25 \, [dB]$ \\
+        Bandas de rechazo & $f \leq 200 \, [Hz]$ y $f \geq 5 \, [kHz]$ \\
+        Atenuación mínima en las bandas de rechazo ($A_s$) & $30 \, [dB]$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La consigna pide aproximar la función de atenuación con polinomios de Chebyshev, sintetizar el circuito con bicuadráticas de realimentación positiva o negativa, simular cada etapa y el filtro completo, calcular las sensibilidades de la frecuencia del polo y del ancho de banda de cada bicuadrática, analizar la peor desviación con componentes del $10 \, [\%]$ y realizar una simulación de Montecarlo. Como ejercicio adicional, se pide diseñar un oscilador de $12 \, [kHz]$ y ajustarlo a $\pm 100 \, [Hz]$.
+
+El filtro se implementó con celdas Sallen-Key de componentes iguales, siguiendo el método de síntesis de Daryanani \cite{daryanani}, y se simuló en LTspice \cite{ltspice}. Además de lo solicitado, el trabajo incluye los siguientes agregados:
+\begin{itemize}
+    \item La automatización de todas las simulaciones con Python y la biblioteca \texttt{spicelib}, que permitió ejecutar miles de corridas a partir del esquemático y detectar las inestables.
+    \item La comparación con una implementación de ganancia unitaria de la misma función de transferencia.
+    \item El estudio del cumplimiento de la plantilla en función de la tolerancia de los componentes.
+    \item El efecto del amplificador real (LM324) frente al ideal.
+\end{itemize}
+
+El trabajo se organiza de la siguiente manera. En la \autoref{sec_2} se presentan los fundamentos teóricos. En la \autoref{sec_3} se desarrollan la aproximación, la síntesis, la simulación y los análisis de sensibilidad, peor caso y Montecarlo pedidos en la consigna. En la \autoref{sec_4} se presentan los agregados, en la \autoref{sec_5} el ejercicio adicional y en la \autoref{sec_6} las conclusiones. Los anexos contienen el código utilizado.
+
+\input{marco_teorico.tex}
+\newpage
+
+\input{desarrollo.tex}
+\newpage
+
+\input{agregados.tex}
+\newpage
+
+\input{oscilador.tex}
+\newpage
+
+\input{conclusiones.tex}
+
+\newpage
+\printbibliography[heading=bibintoc, title={Bibliografía y Referencias}]
+
+\newpage
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+\section{Anexo: Script de MATLAB}
+\label{anexo_matlab}
+Aproximación de Chebyshev y descomposición en bicuadráticas, basada en el script del anexo de la guía (archivo \texttt{aproximacion\_tp4.m}).
+\lstinputlisting[style=codigo, language=Matlab]{../scripts/aproximacion_tp4.m}
+
+\section{Anexo: Automatización de las Simulaciones}
+\label{anexo_python}
+Fragmentos del script \texttt{simular\_tp4.py}. El código completo, junto con \texttt{spice\_tp4.py}, \texttt{graficos\_tp4.py} y \texttt{abrir\_figura.py}, se encuentra en el repositorio del trabajo.
+
+\subsubsection*{Ejecución de un lote de corridas en una sola simulación de LTspice}
+\lstinputlisting[style=codigo, language=Python, firstline=71, lastline=89]{../scripts/simular_tp4.py}
+
+\subsubsection*{Polos de cada corrida (detección de inestabilidad)}
+\lstinputlisting[style=codigo, language=Python, firstline=99, lastline=110]{../scripts/simular_tp4.py}
+
+\subsubsection*{Estudio de Montecarlo}
+\lstinputlisting[style=codigo, language=Python, firstline=172, lastline=194]{../scripts/simular_tp4.py}
+\end{document}
